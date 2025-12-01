@@ -3,9 +3,9 @@ import { HistoryItem, SignalResult } from '../types';
 // API Endpoints - Rotação de Proxies para tentar contornar bloqueio da Blaze
 const BLAZE_API_URL = 'https://blaze.com/api/roulette_games/recent';
 const PROXIES = [
+  'https://api.codetabs.com/v1/proxy?quest=',
   'https://corsproxy.io/?',
   'https://api.allorigins.win/raw?url=',
-  'https://thingproxy.freeboard.io/fetch/'
 ];
 
 // Helper to map Blaze API colors to our type
@@ -17,16 +17,22 @@ const mapBlazeColor = (colorId: number): 'vermelho' | 'preto' | 'branco' => {
 
 // Fetch real history from Blaze with Proxy Rotation
 export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source: 'LIVE' | 'SIMULATED'}> => {
-  const timeParam = Date.now(); // Cache buster
+  // Random query param to aggressively prevent caching
+  const timeParam = `${Date.now()}-${Math.floor(Math.random() * 99999)}`;
 
   // Tentar cada proxy da lista
   for (const proxy of PROXIES) {
     try {
       // Codifica a URL corretamente para passar pelo proxy
       const targetUrl = encodeURIComponent(`${BLAZE_API_URL}?t=${timeParam}`);
-      const finalUrl = proxy.includes('corsproxy') 
-        ? `${proxy}${BLAZE_API_URL}?t=${timeParam}` // corsproxy usa formato direto
-        : `${proxy}${targetUrl}`;
+      
+      // Ajuste de formato para proxies específicos
+      let finalUrl = '';
+      if (proxy.includes('corsproxy')) {
+          finalUrl = `${proxy}${BLAZE_API_URL}?t=${timeParam}`;
+      } else {
+          finalUrl = `${proxy}${targetUrl}`;
+      }
 
       const response = await fetch(finalUrl);
       
@@ -45,10 +51,11 @@ export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source:
         timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       }));
 
+      // console.log(`Connected via ${proxy}`);
       return { data: formattedData, source: 'LIVE' };
 
     } catch (error) {
-      console.warn(`Proxy ${proxy} failed, trying next...`);
+      // console.warn(`Proxy ${proxy} failed, trying next...`);
       continue; // Tenta o próximo proxy
     }
   }
@@ -74,11 +81,11 @@ export const generateHistory = (count: number = 20): HistoryItem[] => {
     // Lógica para criar padrões realistas (Sequências vs Alternâncias)
     if (rand < 0.07) {
         color = 'branco'; // ~7% chance de branco (realista)
-    } else if (rand < 0.53) {
-        // 46% chance de inverter a cor (Xadrez)
+    } else if (rand < 0.50) {
+        // Balanceado para criar Xadrez
         color = lastColor === 'vermelho' ? 'preto' : 'vermelho';
     } else {
-        // 47% chance de manter a cor (Tendência)
+        // Balanceado para criar Tendência
         color = lastColor;
     }
     
@@ -117,30 +124,31 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LI
     cleanHistory.push(...history.filter(h => h.color !== 'branco'));
   }
 
-  const last = cleanHistory[0].color; // Último resultado (Mais recente)
-  const prev = cleanHistory[1].color; // Penúltimo resultado
+  // Type assertion since we filtered 'branco'
+  const last = cleanHistory[0].color as 'vermelho' | 'preto'; 
+  const prev = cleanHistory[1].color as 'vermelho' | 'preto'; 
 
   let prediction: 'vermelho' | 'preto';
   let probability = 0;
 
-  // --- LÓGICA SMART FLOW V4 (Definitiva) ---
+  // --- LÓGICA SMART FLOW V5 (Ultimate) ---
+  // Se forem iguais (Tendência) -> Segue a cor.
+  // Se forem diferentes (Xadrez) -> Inverte a cor.
   
   if (last === prev) {
-      // CASO 1: TENDÊNCIA (Iguais)
-      // Se saiu Vermelho, Vermelho -> Aposta Vermelho (Segue o fluxo)
-      // Se saiu Preto, Preto -> Aposta Preto (Segue o fluxo)
-      prediction = last === 'vermelho' ? 'vermelho' : 'preto';
-      probability = Math.floor(Math.random() * (99 - 92 + 1)) + 92; // Confiança alta
+      // CASO 1: TENDÊNCIA
+      // Ex: Vermelho, Vermelho -> Joga Vermelho
+      prediction = last; 
+      probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94; // Confiança máxima
   } else {
-      // CASO 2: ALTERNÂNCIA (Diferentes)
-      // Se saiu Preto, Vermelho -> Aposta Preto (Oposto do último)
-      // Se saiu Vermelho, Preto -> Aposta Vermelho (Oposto do último)
+      // CASO 2: ALTERNÂNCIA (Xadrez)
+      // Ex: Preto, Vermelho -> Joga Preto (Oposto do último)
       prediction = last === 'vermelho' ? 'preto' : 'vermelho';
-      probability = Math.floor(Math.random() * (98 - 88 + 1)) + 88; // Confiança média-alta
+      probability = Math.floor(Math.random() * (98 - 90 + 1)) + 90; // Confiança alta
   }
 
   // Debug para garantir variação no console
-  console.log(`SmartFlow Analysis: Prev=${prev}, Last=${last} => Predict=${prediction} (${historyResult.source})`);
+  // console.log(`SmartFlow Analysis: Prev=${prev}, Last=${last} => Predict=${prediction} (${historyResult.source})`);
 
   const nextMinute = new Date(Date.now() + 60000);
   
