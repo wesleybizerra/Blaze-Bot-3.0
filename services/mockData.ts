@@ -37,33 +37,25 @@ export const fetchBlazeHistory = async (): Promise<HistoryItem[]> => {
 export const generateHistory = (count: number = 15): HistoryItem[] => {
   const items: HistoryItem[] = [];
   const now = Date.now();
-  let lastColor: 'vermelho' | 'preto' | 'branco' = 'vermelho'; // Track for streaks
   
   for (let i = 0; i < count; i++) {
     const rand = Math.random();
     let color: 'vermelho' | 'preto' | 'branco' = 'vermelho';
     let value = 1;
 
-    // EXTREME STREAK GENERATION (Momentum Simulation)
-    // 80% chance to repeat last color to simulate strong trends
-    if (Math.random() < 0.8 && i > 0 && lastColor !== 'branco') {
-        color = lastColor;
+    // Random generation for fallback
+    if (rand < 0.05) {
+      color = 'branco';
+    } else if (rand < 0.525) {
+      color = 'vermelho';
     } else {
-        if (rand < 0.05) {
-          color = 'branco';
-        } else if (rand < 0.525) {
-          color = 'vermelho';
-        } else {
-          color = 'preto';
-        }
+      color = 'preto';
     }
     
     // Assign values
     if (color === 'branco') value = 0;
     else if (color === 'vermelho') value = Math.floor(Math.random() * 7) + 1;
     else value = Math.floor(Math.random() * 7) + 8;
-
-    lastColor = color;
 
     items.push({
       color,
@@ -75,9 +67,10 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
 };
 
 export const generateFakeSignal = async (): Promise<SignalResult> => {
-  // LÓGICA DE "MOMENTUM LOCK" (Trava de Tendência)
-  // Estratégia: Seguir cegamente a última cor.
-  // Efeito: Se der sequência (Streak), acerta TUDO. Se der Xadrez (Chop), erra TUDO.
+  // LÓGICA "SMART FLOW" (Fluxo Inteligente)
+  // 1. Analisa os 2 últimos resultados.
+  // 2. Se forem iguais (Tendência): Manda seguir a cor.
+  // 3. Se forem diferentes (Xadrez): Manda inverter a cor.
   
   let history: HistoryItem[] = [];
   try {
@@ -87,36 +80,34 @@ export const generateFakeSignal = async (): Promise<SignalResult> => {
   }
 
   // Ensure we have data
-  if (history.length === 0) {
+  if (history.length < 2) {
     history = generateHistory(15);
   }
 
   const lastResult = history[0];
+  const prevResult = history[1];
   
   let prediction: 'vermelho' | 'preto';
   let probability = 0;
 
-  // Lógica de Repetição Pura
-  if (lastResult.color === 'branco') {
-      // Se veio branco, ignora o branco e pega a cor anterior para manter a tendência macro
-      // Se não tiver anterior (index 1), assume vermelho por padrão
-      const penultResult = history[1] || { color: 'vermelho' };
-      
-      // Se o penúltimo também for branco (raro), pega o antepenúltimo
-      if (penultResult.color === 'branco') {
-         prediction = 'vermelho'; // Fallback seguro
-      } else {
-         prediction = penultResult.color as 'vermelho' | 'preto';
-      }
-      
-      // Branco gera instabilidade, probabilidade levemente menor visualmente
-      probability = Math.floor(Math.random() * (92 - 85 + 1)) + 85; 
+  // Normalizar Branco: Se o último foi branco, olhamos o anterior a ele para definir o fluxo
+  let colorA = lastResult.color === 'branco' ? (history[1]?.color || 'vermelho') : lastResult.color;
+  let colorB = prevResult.color === 'branco' ? (history[2]?.color || 'preto') : prevResult.color;
+  
+  // Se ainda for branco (muitos brancos seguidos), fallback para vermelho
+  if (colorA === 'branco') colorA = 'vermelho';
+  if (colorB === 'branco') colorB = 'preto';
+
+  if (colorA === colorB) {
+      // TENDÊNCIA DETECTADA (Ex: Vermelho -> Vermelho)
+      // Ação: Surf no Trend -> Mandar Vermelho
+      prediction = colorA as 'vermelho' | 'preto';
+      probability = Math.floor(Math.random() * (98 - 92 + 1)) + 92; // Confiança alta
   } else {
-      // Se foi cor normal, manda entrar NELA MESMA.
-      // Isso garante aproveitar streaks de 5, 6, 10 cores iguais.
-      prediction = lastResult.color;
-      // Probabilidade visual altíssima para encorajar a entrada no fluxo
-      probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94; 
+      // ALTERNÂNCIA DETECTADA (Ex: Preto -> Vermelho)
+      // Ação: Apostar no Xadrez -> Mandar Oposto de Vermelho (Preto)
+      prediction = colorA === 'vermelho' ? 'preto' : 'vermelho';
+      probability = Math.floor(Math.random() * (95 - 88 + 1)) + 88; // Confiança média-alta
   }
 
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now
