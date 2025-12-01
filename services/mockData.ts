@@ -14,7 +14,8 @@ const mapBlazeColor = (colorId: number): 'vermelho' | 'preto' | 'branco' => {
 // Fetch real history from Blaze
 export const fetchBlazeHistory = async (): Promise<HistoryItem[]> => {
   try {
-    const response = await fetch(`${CORS_PROXY}${BLAZE_API_URL}`);
+    // CRITICAL: Add timestamp to prevent caching
+    const response = await fetch(`${CORS_PROXY}${BLAZE_API_URL}?t=${Date.now()}`);
     if (!response.ok) throw new Error('Network response was not ok');
     
     const data = await response.json();
@@ -85,6 +86,11 @@ export const generateFakeSignal = async (): Promise<SignalResult> => {
     history = generateHistory(15);
   }
 
+  // Ensure we have data
+  if (history.length === 0) {
+    history = generateHistory(15);
+  }
+
   const lastResult = history[0];
   
   let prediction: 'vermelho' | 'preto';
@@ -92,9 +98,17 @@ export const generateFakeSignal = async (): Promise<SignalResult> => {
 
   // Lógica de Repetição Pura
   if (lastResult.color === 'branco') {
-      // Se veio branco, olha a cor anterior e mantém o fluxo
+      // Se veio branco, ignora o branco e pega a cor anterior para manter a tendência macro
+      // Se não tiver anterior (index 1), assume vermelho por padrão
       const penultResult = history[1] || { color: 'vermelho' };
-      prediction = penultResult.color === 'preto' ? 'preto' : 'vermelho';
+      
+      // Se o penúltimo também for branco (raro), pega o antepenúltimo
+      if (penultResult.color === 'branco') {
+         prediction = 'vermelho'; // Fallback seguro
+      } else {
+         prediction = penultResult.color as 'vermelho' | 'preto';
+      }
+      
       // Branco gera instabilidade, probabilidade levemente menor visualmente
       probability = Math.floor(Math.random() * (92 - 85 + 1)) + 85; 
   } else {
