@@ -1,0 +1,51 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
+import { useApp } from '../context/AppContext';
+import { Zap, History, User, CreditCard, Shield } from 'lucide-react';
+
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { currentUser, isAdmin } = useApp();
+
+  const menuItems = [
+    { label: 'Sinais Double', icon: <Zap size={24} />, path: '/signals', color: 'bg-gradient-to-br from-celestial-600 to-celestial-800' },
+    { label: 'Histórico', icon: <History size={24} />, path: '/history', color: 'bg-celestial-800' },
+    { label: 'Meu Perfil', icon: <User size={24} />, path: '/profile', color: 'bg-celestial-800' },
+    { label: 'Assinaturas', icon: <CreditCard size={24} />, path: '/subscriptions', color: 'bg-celestial-800' },
+  ];
+
+  if (isAdmin) {
+    menuItems.push({ label: 'Admin', icon: <Shield size={24} />, path: '/admin', color: 'bg-red-900' });
+  }
+
+  return (
+    <Layout showBack={false}>
+      <div className="space-y-6">
+        <div className="bg-celestial-800/50 border border-celestial-700 p-4 rounded-xl">
+          <h2 className="text-xl font-bold text-white">Olá, {currentUser?.name || 'Usuário'}</h2>
+          <p className="text-celestial-400 text-sm mt-1">
+            Plano atual: <span className="font-semibold uppercase">{currentUser?.plan}</span>
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {menuItems.map((item, index) => (
+            <button
+              key={index}
+              onClick={() => navigate(item.path)}
+              className={`${item.color} p-6 rounded-2xl shadow-lg border border-celestial-700/50 flex items-center gap-4 hover:scale-[1.02] transition-transform group`}
+            >
+              <div className="bg-celestial-950/30 p-3 rounded-full text-white group-hover:text-celestial-300 transition-colors">
+                {item.icon}
+              </div>
+              <span className="text-lg font-bold text-white tracking-wide">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default Dashboard;
