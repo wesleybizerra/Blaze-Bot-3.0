@@ -37,7 +37,7 @@ export const generateFakeSignal = () => {
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now
   
   return {
-    color: isRed ? 'vermelho' : 'preto',
+    color: (isRed ? 'vermelho' : 'preto') as 'vermelho' | 'preto',
     probability,
     time: nextMinute.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   };

@@ -39,7 +39,9 @@ const Signals: React.FC = () => {
     // The generateFakeSignal helper already handles the logic, but ensuring here.
     
     setSignal({
-      ...result,
+      color: result.color,
+      probability: result.probability,
+      time: result.time,
       generatedAt: Date.now()
     });
     setLoading(false);
