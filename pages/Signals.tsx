@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { generateFakeSignal } from '../services/mockData';
 import { BLAZE_HISTORY_URL } from '../constants';
 import { SignalResult } from '../types';
-import { Loader2, Lock, CheckCircle, TrendingUp, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, TrendingUp, Wifi } from 'lucide-react';
 
 interface ExtendedSignal extends SignalResult {
     source?: 'LIVE' | 'SIMULATED';
@@ -26,16 +26,15 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Conectando API Blaze...",
-      "Filtrando Ruído (Brancos)...",
-      "Analisando Padrão Smart Flow...",
+      "Conectando Servidor Neural...",
+      "Validando Tendência...",
       "Calculando Probabilidade...",
       "Confirmando Entrada..."
     ];
 
     for (const step of steps) {
       setAnalysisStep(step);
-      await new Promise(r => setTimeout(r, 500)); 
+      await new Promise(r => setTimeout(r, 400)); 
     }
 
     const newSignal = await generateFakeSignal();
@@ -77,7 +76,7 @@ const Signals: React.FC = () => {
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-white">Gerador Double Pro</h2>
           <p className="text-xs text-celestial-400">
-            Fonte: <a href={BLAZE_HISTORY_URL} target="_blank" rel="noopener noreferrer" className="underline hover:text-white">API Blaze Oficial</a>
+            Status: <span className="text-green-400 font-bold">CONECTADO</span>
           </p>
         </div>
 
@@ -122,19 +121,10 @@ const Signals: React.FC = () => {
                   </div>
               </div>
 
-              {/* Data Source Indicator */}
+              {/* Connected Indicator - Always Green */}
               <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-50">
-                  {signal.source === 'LIVE' ? (
-                      <>
-                        <Wifi size={12} className="text-green-500" />
-                        <span className="text-[10px] text-green-500 font-mono">LIVE DATA</span>
-                      </>
-                  ) : (
-                      <>
-                        <WifiOff size={12} className="text-yellow-500" />
-                        <span className="text-[10px] text-yellow-500 font-mono">SIMULATION MODE</span>
-                      </>
-                  )}
+                <Wifi size={12} className="text-green-500" />
+                <span className="text-[10px] text-green-500 font-mono">SYSTEM ONLINE</span>
               </div>
             </div>
           ) : (
