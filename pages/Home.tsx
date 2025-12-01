@@ -11,12 +11,12 @@ const Home: React.FC = () => {
       <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-8 animate-fade-in relative">
         
         {/* Operational Status Badge */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-4 inline-flex items-center gap-2 bg-celestial-900/80 px-4 py-1.5 rounded-full border border-celestial-700/50 backdrop-blur-sm">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-4 inline-flex items-center gap-2 bg-celestial-900/80 px-4 py-1.5 rounded-full border border-celestial-700/50 backdrop-blur-sm shadow-lg shadow-emerald-900/20">
             <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-celestial-300 font-bold">Sistema Operacional v3.1</span>
+            <span className="text-[10px] uppercase tracking-widest text-celestial-300 font-bold">System v4.2 - LIVE CORE</span>
         </div>
 
         <div className="space-y-4 pt-12">

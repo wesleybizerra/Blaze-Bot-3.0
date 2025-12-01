@@ -18,7 +18,7 @@ const mapBlazeColor = (colorId: number): 'vermelho' | 'preto' | 'branco' => {
 // Fetch real history from Blaze with Proxy Rotation
 export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source: 'LIVE' | 'SIMULATED'}> => {
   // Random query param to aggressively prevent caching
-  const timeParam = `${Date.now()}-${Math.floor(Math.random() * 99999)}`;
+  const timeParam = `${Date.now()}-${Math.floor(Math.random() * 999999)}`;
 
   // Tentar cada proxy da lista
   for (const proxy of PROXIES) {
@@ -51,7 +51,7 @@ export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source:
         timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       }));
 
-      // console.log(`Connected via ${proxy}`);
+      console.log(`[BlazePredict] Connected via ${proxy.substring(0, 20)}...`);
       return { data: formattedData, source: 'LIVE' };
 
     } catch (error) {
@@ -61,7 +61,7 @@ export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source:
   }
 
   // Se todos falharem, usa simulação balanceada
-  console.warn("All proxies failed. Using High-Fidelity Simulation.");
+  console.warn("[BlazePredict] All proxies failed. Using High-Fidelity Simulation.");
   return { data: generateHistory(20), source: 'SIMULATED' };
 };
 
@@ -79,13 +79,13 @@ export const generateHistory = (count: number = 20): HistoryItem[] => {
     let value = 1;
 
     // Lógica para criar padrões realistas (Sequências vs Alternâncias)
-    if (rand < 0.07) {
-        color = 'branco'; // ~7% chance de branco (realista)
-    } else if (rand < 0.50) {
-        // Balanceado para criar Xadrez
+    if (rand < 0.08) {
+        color = 'branco'; // ~8% chance de branco
+    } else if (rand < 0.54) {
+        // Balanceado para criar Xadrez (Alternância)
         color = lastColor === 'vermelho' ? 'preto' : 'vermelho';
     } else {
-        // Balanceado para criar Tendência
+        // Balanceado para criar Tendência (Repetição)
         color = lastColor;
     }
     
@@ -124,31 +124,29 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LI
     cleanHistory.push(...history.filter(h => h.color !== 'branco'));
   }
 
-  // Type assertion since we filtered 'branco'
+  // Pegar as duas últimas cores REAIS (ignorando brancos)
   const last = cleanHistory[0].color as 'vermelho' | 'preto'; 
   const prev = cleanHistory[1].color as 'vermelho' | 'preto'; 
 
   let prediction: 'vermelho' | 'preto';
   let probability = 0;
 
-  // --- LÓGICA SMART FLOW V5 (Ultimate) ---
-  // Se forem iguais (Tendência) -> Segue a cor.
-  // Se forem diferentes (Xadrez) -> Inverte a cor.
+  // --- LÓGICA SMART FLOW V4.2 (Rigorous) ---
+  // A lógica deve ser determinística baseada no padrão.
   
   if (last === prev) {
-      // CASO 1: TENDÊNCIA
-      // Ex: Vermelho, Vermelho -> Joga Vermelho
+      // PADRÃO: TENDÊNCIA (Ex: Vermelho, Vermelho)
+      // AÇÃO: Apostar na CONTINUAÇÃO
       prediction = last; 
       probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94; // Confiança máxima
+      console.log(`[SmartFlow] Pattern: TREND (${last}, ${last}) -> Follow ${prediction}`);
   } else {
-      // CASO 2: ALTERNÂNCIA (Xadrez)
-      // Ex: Preto, Vermelho -> Joga Preto (Oposto do último)
+      // PADRÃO: ALTERNÂNCIA/XADREZ (Ex: Vermelho, Preto)
+      // AÇÃO: Apostar na INVERSÃO (Oposto do último)
       prediction = last === 'vermelho' ? 'preto' : 'vermelho';
       probability = Math.floor(Math.random() * (98 - 90 + 1)) + 90; // Confiança alta
+      console.log(`[SmartFlow] Pattern: CHOP (${prev}, ${last}) -> Reverse to ${prediction}`);
   }
-
-  // Debug para garantir variação no console
-  // console.log(`SmartFlow Analysis: Prev=${prev}, Last=${last} => Predict=${prediction} (${historyResult.source})`);
 
   const nextMinute = new Date(Date.now() + 60000);
   
