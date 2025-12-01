@@ -16,151 +16,147 @@ const mapBlazeColor = (colorId: number): 'vermelho' | 'preto' | 'branco' => {
   return 'branco';
 };
 
-// Fetch real history from Blaze with Proxy Rotation
-export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source: 'LIVE' | 'SIMULATED'}> => {
-  // Random query param to aggressively prevent caching
-  const timeParam = `${Date.now()}-${Math.floor(Math.random() * 999999)}`;
-
-  // Tentar cada proxy da lista
-  for (const proxy of PROXIES) {
-    try {
-      // Codifica a URL corretamente para passar pelo proxy
-      const targetUrl = encodeURIComponent(`${BLAZE_API_URL}?t=${timeParam}`);
-      
-      // Ajuste de formato para proxies específicos
-      let finalUrl = '';
-      if (proxy.includes('corsproxy')) {
-          finalUrl = `${proxy}${BLAZE_API_URL}?t=${timeParam}`;
-      } else {
-          finalUrl = `${proxy}${targetUrl}`;
-      }
-
-      const response = await fetch(finalUrl);
-      
-      if (!response.ok) throw new Error('Proxy error');
-      
-      const rawData = await response.json();
-      
-      // Validação básica se é a resposta da Blaze (deve ser um array ou objeto com records)
-      const list = Array.isArray(rawData) ? rawData : (rawData.records || rawData.contents || []);
-      
-      if (!Array.isArray(list) || list.length === 0) throw new Error('Invalid data format');
-
-      const formattedData: HistoryItem[] = list.slice(0, 20).map((item: any) => ({
-        color: mapBlazeColor(item.color),
-        value: item.roll,
-        timestamp: new Date(item.created_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      }));
-
-      console.log(`[BlazePredict] Connected via ${proxy.substring(0, 20)}...`);
-      return { data: formattedData, source: 'LIVE' };
-
-    } catch (error) {
-      // console.warn(`Proxy ${proxy} failed, trying next...`);
-      continue; // Tenta o próximo proxy
-    }
-  }
-
-  // Se todos falharem, usa simulação balanceada
-  console.warn("[BlazePredict] All proxies failed. Using High-Fidelity Simulation.");
-  // Randomize bias to ensure we get both Black and Red signals in simulation
-  const randomBias = Math.random() > 0.5 ? 'vermelho' : 'preto';
-  return { data: generateHistory(20, randomBias), source: 'SIMULATED' };
-};
-
 // Simulate reading "patterns" to generate a realistic looking history (Fallback)
-// Added 'bias' to force diversity in simulation outcomes
-export const generateHistory = (count: number = 20, bias?: 'vermelho' | 'preto'): HistoryItem[] => {
+export const generateHistory = (count: number = 20, forcedSignal?: 'vermelho' | 'preto'): HistoryItem[] => {
   const items: HistoryItem[] = [];
   const now = Date.now();
   
-  // Se um viés for passado, começamos com ele para influenciar a tendência recente
-  let lastColor: 'vermelho' | 'preto' | 'branco' = bias || (Math.random() > 0.5 ? 'vermelho' : 'preto');
+  // Se precisarmos forçar um sinal específico (Engenharia Reversa)
+  // Smart Flow Logic:
+  // If Last == Penultimate (Trend) -> Signal is Last (Same)
+  // If Last != Penultimate (Chop)  -> Signal is Opposite of Last
+  
+  // Vamos construir os dois últimos itens para garantir o sinal desejado
+  let lastColor: 'vermelho' | 'preto' = 'vermelho';
+  let penLastColor: 'vermelho' | 'preto' = 'vermelho';
 
+  if (forcedSignal) {
+      // Decidir aleatoriamente se vamos chegar no sinal via Tendência ou Via Xadrez
+      const useTrend = Math.random() > 0.5;
+
+      if (useTrend) {
+          // Para sinal X via Tendência: Último = X, Penúltimo = X
+          lastColor = forcedSignal;
+          penLastColor = forcedSignal;
+      } else {
+          // Para sinal X via Xadrez: Oposto de Último tem que ser X. Então Último = Oposto(X).
+          // E Penúltimo tem que ser diferente de Último. Então Penúltimo = X.
+          lastColor = forcedSignal === 'vermelho' ? 'preto' : 'vermelho';
+          penLastColor = forcedSignal; // Different from last
+      }
+  } else {
+      lastColor = Math.random() > 0.5 ? 'vermelho' : 'preto';
+      penLastColor = Math.random() > 0.5 ? 'vermelho' : 'preto';
+  }
+
+  // Preencher o histórico de trás pra frente
   for (let i = 0; i < count; i++) {
-    const rand = Math.random();
     let color: 'vermelho' | 'preto' | 'branco';
-    let value = 1;
-
-    // Lógica para criar padrões realistas (Sequências vs Alternâncias)
-    if (rand < 0.08) {
-        color = 'branco'; // ~8% chance de branco
-    } else if (rand < 0.45) { // 45% chance de alternar
-        color = lastColor === 'vermelho' ? 'preto' : 'vermelho';
-    } else { // 47% chance de manter (Tendência)
-        color = lastColor;
-    }
     
-    // Ignorar branco para definir a "última cor de aposta"
-    if (color !== 'branco') {
-        lastColor = color;
+    if (i === 0) {
+        color = lastColor;
+    } else if (i === 1) {
+        color = penLastColor;
+    } else {
+        // Randomico para o resto
+        const r = Math.random();
+        if (r < 0.05) color = 'branco';
+        else color = Math.random() > 0.5 ? 'vermelho' : 'preto';
     }
-
-    // Assign values based on color
-    if (color === 'branco') value = 0;
-    else if (color === 'vermelho') value = Math.floor(Math.random() * 7) + 1;
-    else value = Math.floor(Math.random() * 7) + 8;
 
     items.push({
       color,
-      value,
-      timestamp: new Date(now - i * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      value: Math.floor(Math.random() * 14) + 1,
+      timestamp: new Date(now - i * 60000).toISOString()
     });
   }
+
   return items;
 };
 
-export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LIVE' | 'SIMULATED' }> => {
-  let historyResult = await fetchBlazeHistory();
+export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source: 'LIVE' | 'SIMULATED' }> => {
+  // Random param to bypass aggressive caching
+  const cacheBuster = `?t=${Date.now()}-${Math.floor(Math.random() * 99999)}`;
+  
+  for (const proxy of PROXIES) {
+    try {
+      const response = await fetch(`${proxy}${encodeURIComponent(BLAZE_API_URL)}${cacheBuster}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Check if data structure matches standard Blaze API
+        const records = Array.isArray(data) ? data : (data.records || []);
+        
+        if (records.length > 0) {
+            const mapped: HistoryItem[] = records.map((item: any) => ({
+              color: mapBlazeColor(item.color),
+              value: item.roll,
+              timestamp: item.created_at
+            }));
+            
+            console.log("BLAZE API: Success via " + proxy);
+            return { data: mapped, source: 'LIVE' };
+        }
+      }
+    } catch (error) {
+      console.warn(`Proxy failed: ${proxy}`, error);
+      continue;
+    }
+  }
+
+  console.warn("BLAZE API: All proxies failed. Using Simulation.");
+  // Se falhar, retorna histórico sem viés forçado (aleatório)
+  return { data: generateHistory(15), source: 'SIMULATED' };
+};
+
+export const generateFakeSignal = async (): Promise<SignalResult & { source?: 'LIVE' | 'SIMULATED' }> => {
+  // 1. Tentar pegar dados reais
+  const historyResult = await fetchBlazeHistory();
   let history = historyResult.data;
+  let source = historyResult.source;
 
-  // 1. Filtrar Brancos para análise de fluxo puro (Clean Stream)
-  const cleanHistory = history.filter(h => h.color !== 'branco');
+  // 2. Filtrar brancos para análise pura
+  let cleanHistory = history.filter(h => h.color !== 'branco');
 
-  // Fallback de emergência se a filtragem esvaziar a lista
+  // 3. Fallback inteligente: Se não tiver dados suficientes ou for simulado,
+  // vamos garantir que haja dados e controlar o viés para não viciar em uma cor.
   if (cleanHistory.length < 2) {
-    // Force bias opposite of generic random to ensure mix
-    const bias = Math.random() > 0.5 ? 'vermelho' : 'preto';
-    history = generateHistory(20, bias);
-    historyResult.source = 'SIMULATED'; 
-    cleanHistory.length = 0; // Clear and refill
-    cleanHistory.push(...history.filter(h => h.color !== 'branco'));
+      // Decisão 50/50 forçada para o sinal desejado
+      const targetSignal = Math.random() > 0.5 ? 'vermelho' : 'preto';
+      // Gerar histórico que resulte neste sinal
+      history = generateHistory(20, targetSignal);
+      cleanHistory = history.filter(h => h.color !== 'branco');
+      source = 'SIMULATED';
   }
 
-  // Pegar as duas últimas cores REAIS (ignorando brancos)
-  const last = cleanHistory[0].color as 'vermelho' | 'preto'; 
-  const prev = cleanHistory[1].color as 'vermelho' | 'preto'; 
+  // 4. Lógica "Smart Flow" (Tendência vs Xadrez)
+  const last = cleanHistory[0];
+  const penLast = cleanHistory[1];
 
-  let prediction: 'vermelho' | 'preto';
-  let probability = 0;
+  let nextColor: 'vermelho' | 'preto';
 
-  // --- LÓGICA SMART FLOW V5.0 (Balanced) ---
-  
-  if (last === prev) {
-      // PADRÃO: TENDÊNCIA (Ex: Vermelho, Vermelho)
-      // AÇÃO: Apostar na CONTINUAÇÃO
-      prediction = last; 
-      probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94; // Confiança máxima
-      console.log(`[SmartFlow] Pattern: TREND (${last}, ${last}) -> Follow ${prediction}`);
+  if (last.color === penLast.color) {
+      // TENDÊNCIA (Iguais): Seguir a tendência
+      // Ex: P, P -> P
+      nextColor = last.color as 'vermelho' | 'preto';
   } else {
-      // PADRÃO: ALTERNÂNCIA/XADREZ (Ex: Vermelho, Preto)
-      // AÇÃO: Apostar na INVERSÃO (Oposto do último)
-      // Se último foi vermelho (e penúltimo preto), a aposta na inversão é PRETO.
-      prediction = last === 'vermelho' ? 'preto' : 'vermelho';
-      probability = Math.floor(Math.random() * (98 - 90 + 1)) + 90; // Confiança alta
-      console.log(`[SmartFlow] Pattern: CHOP (${prev}, ${last}) -> Reverse to ${prediction}`);
+      // XADREZ (Diferentes): Inverter
+      // Ex: V, P -> V (Oposto de P)
+      nextColor = last.color === 'vermelho' ? 'preto' : 'vermelho';
   }
 
-  const nextMinute = new Date(Date.now() + 60000);
-  
-  // Explicit cast to ensure TS matches SignalResult type exactly
-  const result: SignalResult & { source: 'LIVE' | 'SIMULATED' } = {
-    color: prediction,
-    probability,
-    time: nextMinute.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    generatedAt: Date.now(),
-    source: historyResult.source
-  };
+  // Generate future time
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 2);
+  const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-  return result;
+  // High probability for confidence
+  const probability = Math.floor(Math.random() * (99 - 88 + 1)) + 88;
+
+  return {
+    color: nextColor as 'vermelho' | 'preto',
+    probability,
+    time: timeString,
+    generatedAt: Date.now(),
+    source
+  };
 };
