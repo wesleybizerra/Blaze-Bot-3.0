@@ -25,28 +25,32 @@ const Admin: React.FC = () => {
   );
 
   const handleAddTime = (email: string) => {
-    // Custom logic to ask for Days, Hours, Minutes
-    const daysStr = prompt("Adicionar DIAS:", "0");
-    if (daysStr === null) return;
+    // Logic updated to allow specific Hours and Minutes input easily
+    // If user cancels or leaves empty, it defaults to 0
+    const daysInput = prompt("Adicionar quantos DIAS?", "0");
+    const days = parseInt(daysInput || "0");
     
-    const hoursStr = prompt("Adicionar HORAS:", "0");
-    if (hoursStr === null) return;
+    const hoursInput = prompt("Adicionar quantas HORAS?", "0");
+    const hours = parseInt(hoursInput || "0");
     
-    const minsStr = prompt("Adicionar MINUTOS:", "0");
-    if (minsStr === null) return;
+    const minsInput = prompt("Adicionar quantos MINUTOS?", "0");
+    const mins = parseInt(minsInput || "0");
 
-    const days = parseInt(daysStr) || 0;
-    const hours = parseInt(hoursStr) || 0;
-    const mins = parseInt(minsStr) || 0;
-
-    if (days === 0 && hours === 0 && mins === 0) {
-        alert("Nenhum tempo informado.");
+    if (isNaN(days) || isNaN(hours) || isNaN(mins)) {
+        alert("Por favor, insira apenas números válidos.");
         return;
     }
 
-    const totalHours = (days * 24) + hours + (mins / 60);
-    addTime(email, totalHours);
-    alert(`Tempo adicionado: ${days}d ${hours}h ${mins}m`);
+    if (days === 0 && hours === 0 && mins === 0) {
+        return;
+    }
+
+    const confirmMsg = `Confirmar adição de tempo para ${email}?\n\nDias: ${days}\nHoras: ${hours}\nMinutos: ${mins}`;
+
+    if (window.confirm(confirmMsg)) {
+        const totalHours = (days * 24) + hours + (mins / 60);
+        addTime(email, totalHours);
+    }
   };
 
   return (
@@ -104,7 +108,7 @@ const Admin: React.FC = () => {
                             className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 transition-colors shadow-sm shadow-blue-900/20"
                             title="Adicionar Dias, Horas e Minutos"
                         >
-                            <Plus size={14} /> Tempo
+                            <Plus size={14} /> Add Tempo
                         </button>
                         
                         {/* Plan Buttons */}

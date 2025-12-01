@@ -6,6 +6,7 @@ const PROXIES = [
   'https://api.codetabs.com/v1/proxy?quest=',
   'https://corsproxy.io/?',
   'https://api.allorigins.win/raw?url=',
+  'https://thingproxy.freeboard.io/fetch/',
 ];
 
 // Helper to map Blaze API colors to our type
@@ -62,16 +63,19 @@ export const fetchBlazeHistory = async (): Promise<{data: HistoryItem[], source:
 
   // Se todos falharem, usa simulação balanceada
   console.warn("[BlazePredict] All proxies failed. Using High-Fidelity Simulation.");
-  return { data: generateHistory(20), source: 'SIMULATED' };
+  // Randomize bias to ensure we get both Black and Red signals in simulation
+  const randomBias = Math.random() > 0.5 ? 'vermelho' : 'preto';
+  return { data: generateHistory(20, randomBias), source: 'SIMULATED' };
 };
 
 // Simulate reading "patterns" to generate a realistic looking history (Fallback)
-export const generateHistory = (count: number = 20): HistoryItem[] => {
+// Added 'bias' to force diversity in simulation outcomes
+export const generateHistory = (count: number = 20, bias?: 'vermelho' | 'preto'): HistoryItem[] => {
   const items: HistoryItem[] = [];
   const now = Date.now();
   
-  // Garantir semente aleatória real a cada chamada
-  let lastColor: 'vermelho' | 'preto' | 'branco' = Math.random() > 0.5 ? 'vermelho' : 'preto';
+  // Se um viés for passado, começamos com ele para influenciar a tendência recente
+  let lastColor: 'vermelho' | 'preto' | 'branco' = bias || (Math.random() > 0.5 ? 'vermelho' : 'preto');
 
   for (let i = 0; i < count; i++) {
     const rand = Math.random();
@@ -81,11 +85,9 @@ export const generateHistory = (count: number = 20): HistoryItem[] => {
     // Lógica para criar padrões realistas (Sequências vs Alternâncias)
     if (rand < 0.08) {
         color = 'branco'; // ~8% chance de branco
-    } else if (rand < 0.54) {
-        // Balanceado para criar Xadrez (Alternância)
+    } else if (rand < 0.45) { // 45% chance de alternar
         color = lastColor === 'vermelho' ? 'preto' : 'vermelho';
-    } else {
-        // Balanceado para criar Tendência (Repetição)
+    } else { // 47% chance de manter (Tendência)
         color = lastColor;
     }
     
@@ -113,14 +115,15 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LI
   let history = historyResult.data;
 
   // 1. Filtrar Brancos para análise de fluxo puro (Clean Stream)
-  // Isso impede que o branco quebre a leitura de tendência
   const cleanHistory = history.filter(h => h.color !== 'branco');
 
   // Fallback de emergência se a filtragem esvaziar a lista
   if (cleanHistory.length < 2) {
-    history = generateHistory(20);
+    // Force bias opposite of generic random to ensure mix
+    const bias = Math.random() > 0.5 ? 'vermelho' : 'preto';
+    history = generateHistory(20, bias);
     historyResult.source = 'SIMULATED'; 
-    // Recalcula clean
+    cleanHistory.length = 0; // Clear and refill
     cleanHistory.push(...history.filter(h => h.color !== 'branco'));
   }
 
@@ -131,8 +134,7 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LI
   let prediction: 'vermelho' | 'preto';
   let probability = 0;
 
-  // --- LÓGICA SMART FLOW V4.2 (Rigorous) ---
-  // A lógica deve ser determinística baseada no padrão.
+  // --- LÓGICA SMART FLOW V5.0 (Balanced) ---
   
   if (last === prev) {
       // PADRÃO: TENDÊNCIA (Ex: Vermelho, Vermelho)
@@ -143,6 +145,7 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LI
   } else {
       // PADRÃO: ALTERNÂNCIA/XADREZ (Ex: Vermelho, Preto)
       // AÇÃO: Apostar na INVERSÃO (Oposto do último)
+      // Se último foi vermelho (e penúltimo preto), a aposta na inversão é PRETO.
       prediction = last === 'vermelho' ? 'preto' : 'vermelho';
       probability = Math.floor(Math.random() * (98 - 90 + 1)) + 90; // Confiança alta
       console.log(`[SmartFlow] Pattern: CHOP (${prev}, ${last}) -> Reverse to ${prediction}`);
