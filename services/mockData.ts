@@ -39,13 +39,13 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
   let lastColor: 'vermelho' | 'preto' | 'branco' = 'vermelho'; // Track for streaks
   
   for (let i = 0; i < count; i++) {
-    // Generate artificial streaks to make Anti-Trend logic fail more often
     const rand = Math.random();
     let color: 'vermelho' | 'preto' | 'branco' = 'vermelho';
     let value = 1;
 
-    // 40% chance to repeat last color (Create streaks)
-    if (Math.random() < 0.4 && i > 0) {
+    // HIGH STREAK GENERATION (Make history look trendy)
+    // 60% chance to repeat last color
+    if (Math.random() < 0.6 && i > 0 && lastColor !== 'branco') {
         color = lastColor;
     } else {
         if (rand < 0.05) {
@@ -74,10 +74,8 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
 };
 
 export const generateFakeSignal = async (): Promise<SignalResult> => {
-  // LÓGICA DE "REVERSÃO DE MAIORIA" (MAJORITY REVERSAL)
-  // Estratégia de Erro: O Bot olha os últimos 5 resultados.
-  // Se a maioria for Vermelho, ele aposta Preto (e vice-versa).
-  // Em mercados de tendência (Blaze), apostar contra a maioria recente costuma gerar LOSS.
+  // LÓGICA DE ALTA ASSERTIVIDADE (TREND SURFING)
+  // Estratégia: Seguir a tendência. Se está dando vermelho, aposta vermelho.
   
   let history: HistoryItem[] = [];
   try {
@@ -86,31 +84,40 @@ export const generateFakeSignal = async (): Promise<SignalResult> => {
     history = generateHistory(15);
   }
 
-  let redCount = 0;
-  let blackCount = 0;
-
-  // Analisa os últimos 5
-  const recent = history.slice(0, 5);
-  recent.forEach(h => {
-      if (h.color === 'vermelho') redCount++;
-      if (h.color === 'preto') blackCount++;
-  });
-
+  // Analisa o histórico recente para identificar padrões de repetição
+  const lastResult = history[0];
+  const penultResult = history[1];
+  
   let prediction: 'vermelho' | 'preto';
+  let probability = 0;
 
-  // Se tem muito Vermelho, aposta Preto (tentando adivinhar o fim da tendência -> Erro comum)
-  if (redCount > blackCount) {
-      prediction = 'preto';
-  } else if (blackCount > redCount) {
-      prediction = 'vermelho';
+  // Lógica de "Surf" (Surfar na onda)
+  if (lastResult.color === penultResult.color && lastResult.color !== 'branco') {
+      // Sequência detectada (ex: Vermelho, Vermelho)
+      // Aposta na continuação da sequência (MUITO FORTE NA BLAZE)
+      prediction = lastResult.color;
+      probability = Math.floor(Math.random() * (99 - 92 + 1)) + 92; // 92% a 99%
+  } else if (lastResult.color === 'branco') {
+      // Pós-Branco geralmente repete a cor anterior ao branco ou alterna
+      // Vamos alternar para evitar double-white loss
+      prediction = penultResult.color === 'vermelho' ? 'preto' : 'vermelho';
+      probability = Math.floor(Math.random() * (95 - 88 + 1)) + 88;
   } else {
-      // Se tiver igual ou branco, aleatório 50/50
-      prediction = Math.random() > 0.5 ? 'vermelho' : 'preto';
-  }
+      // Sem sequência clara, analisa maioria dos últimos 10 (Trend Following)
+      let redCount = 0;
+      let blackCount = 0;
+      history.slice(0, 10).forEach(h => {
+          if (h.color === 'vermelho') redCount++;
+          if (h.color === 'preto') blackCount++;
+      });
 
-  // CONFIGURAÇÃO RÍGIDA DE PROBABILIDADE
-  // Baixíssima assertividade visual: 2% a 25%
-  const probability = Math.floor(Math.random() * (25 - 2 + 1)) + 2; 
+      if (redCount >= blackCount) {
+          prediction = 'vermelho';
+      } else {
+          prediction = 'preto';
+      }
+      probability = Math.floor(Math.random() * (94 - 85 + 1)) + 85; // 85% a 94%
+  }
 
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now
   

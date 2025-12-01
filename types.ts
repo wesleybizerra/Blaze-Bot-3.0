@@ -6,6 +6,7 @@ export enum PlanType {
 
 export interface User {
   email: string;
+  password?: string; // Optional mainly for backward compatibility, but required in UI
   name: string;
   phone: string;
   birthDate: string;
@@ -30,7 +31,7 @@ export interface HistoryItem {
 export interface GlobalState {
   currentUser: User | null;
   users: User[];
-  login: (email: string) => void;
+  login: (email: string, password?: string) => void;
   logout: () => void;
   register: (user: Omit<User, 'plan' | 'trialEndsAt' | 'isBlocked'>) => void;
   updateUser: (email: string, data: Partial<User>) => void;

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Layout from '../components/Layout';
-import { User } from '../types';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +10,7 @@ const Auth: React.FC = () => {
 
   // Form States
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -18,12 +18,21 @@ const Auth: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLogin) {
-      if (!email) return alert('Digite seu email');
-      login(email);
-      navigate('/dashboard');
+      if (!email || !password) return alert('Digite email e senha');
+      login(email, password);
+      // Login function handles success/fail internally in context via alerts or state, 
+      // but in this mock, we assume success if no alert blocks it, so we need to check currentUser in useEffect or just navigate
+      // For simplicity in this mock structure:
+      setTimeout(() => {
+        // We can't easily check success here without refactoring context to return success/fail
+        // But since AppContext sets user immediately on success, we just redirect.
+        // A real app would wait for a promise.
+        const storedUser = localStorage.getItem('blaze_current_user');
+        if (storedUser) navigate('/dashboard');
+      }, 100);
     } else {
-      if (!email || !name || !phone || !birthDate) return alert('Preencha todos os campos');
-      register({ email, name, phone, birthDate });
+      if (!email || !password || !name || !phone || !birthDate) return alert('Preencha todos os campos');
+      register({ email, password, name, phone, birthDate });
       navigate('/dashboard');
     }
   };
@@ -79,6 +88,17 @@ const Auth: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-celestial-900/50 border border-celestial-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-celestial-400 focus:outline-none placeholder-celestial-600"
                 placeholder="seu@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-celestial-300 mb-1 ml-1">Senha</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-celestial-900/50 border border-celestial-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-celestial-400 focus:outline-none placeholder-celestial-600"
+                placeholder="********"
               />
             </div>
 

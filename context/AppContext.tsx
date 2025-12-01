@@ -10,10 +10,21 @@ interface AppContextType extends GlobalState {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Initial dummy user for dev/testing if needed, or empty
+// Initial admin user with requested password
 const INITIAL_USERS: User[] = [
   {
+    email: 'wesleybizerra@hotmail.com',
+    password: 'Cadernorox@27',
+    name: 'Admin Master',
+    phone: '000000000',
+    birthDate: '1990-01-01',
+    plan: PlanType.PREMIUM,
+    trialEndsAt: null,
+    isBlocked: false
+  },
+  {
     email: 'wesleybizerra1@gmail.com',
+    password: '123', // Default simple pass for secondary admin
     name: 'Admin User',
     phone: '000000000',
     birthDate: '1990-01-01',
@@ -24,9 +35,33 @@ const INITIAL_USERS: User[] = [
 ];
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Load from local storage in a real app, using memory for this demo
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Load from local storage to persist accounts across updates
+  const [users, setUsers] = useState<User[]>(() => {
+    const savedUsers = localStorage.getItem('blaze_users_v2');
+    if (savedUsers) {
+      return JSON.parse(savedUsers);
+    }
+    return INITIAL_USERS;
+  });
+
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedSession = localStorage.getItem('blaze_current_user');
+    return savedSession ? JSON.parse(savedSession) : null;
+  });
+
+  // Persist users whenever they change
+  useEffect(() => {
+    localStorage.setItem('blaze_users_v2', JSON.stringify(users));
+  }, [users]);
+
+  // Persist current session
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('blaze_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('blaze_current_user');
+    }
+  }, [currentUser]);
 
   // Check if current user is admin
   const isAdmin = currentUser ? ADMIN_EMAILS.includes(currentUser.email) : false;
@@ -39,7 +74,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     let initialPlan = PlanType.TRIAL;
-    let trialEnd = Date.now() + (25 * 60 * 60 * 1000); // 25 hours
+    // CRITICAL: Set 25 hours trial from NOW
+    let trialEnd = Date.now() + (25 * 60 * 60 * 1000); 
 
     // Auto-activate Premium for whitelist
     if (PREMIUM_WHITELIST.includes(userData.email)) {
@@ -58,13 +94,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentUser(newUser);
   };
 
-  const login = (email: string) => {
+  const login = (email: string, password?: string) => {
     const user = users.find(u => u.email === email);
-    if (user) {
-      setCurrentUser(user);
-    } else {
+    
+    if (!user) {
       alert('Usuário não encontrado. Crie uma conta.');
+      return;
     }
+
+    // Check password logic
+    if (user.password && password) {
+        if (user.password !== password) {
+            alert('Senha incorreta.');
+            return;
+        }
+    } else if (user.password && !password) {
+        alert('Por favor, digite sua senha.');
+        return;
+    }
+
+    setCurrentUser(user);
   };
 
   const logout = () => {
@@ -72,9 +121,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateUser = (email: string, data: Partial<User>) => {
-    setUsers(users.map(u => u.email === email ? { ...u, ...data } : u));
+    setUsers(prevUsers => prevUsers.map(u => u.email === email ? { ...u, ...data } : u));
+    
     if (currentUser?.email === email) {
-      setCurrentUser({ ...currentUser, ...data });
+      setCurrentUser(prev => prev ? { ...prev, ...data } : null);
     }
   };
 
@@ -103,18 +153,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!user) return;
 
     // Extend trial or temporary access
-    const currentEnd = user.trialEndsAt && user.trialEndsAt > Date.now() ? user.trialEndsAt : Date.now();
+    // If expired, start from now. If active, add to current end time.
+    const currentEnd = (user.trialEndsAt && user.trialEndsAt > Date.now()) ? user.trialEndsAt : Date.now();
     const newEnd = currentEnd + (hours * 60 * 60 * 1000);
     
     // If user was expired/no plan, set to TRIAL temporarily so logic works
     const newPlan = user.plan === PlanType.PREMIUM || user.plan === PlanType.MONTHLY ? user.plan : PlanType.TRIAL;
 
     const updatedUser = { ...user, trialEndsAt: newEnd, plan: newPlan };
-    setUsers(users.map(u => u.email === email ? updatedUser : u));
+    
+    // Update both global list and current session if it matches
+    setUsers(prev => prev.map(u => u.email === email ? updatedUser : u));
+    if (currentUser?.email === email) {
+        setCurrentUser(updatedUser);
+    }
   };
 
   const setPlan = (email: string, plan: PlanType) => {
-    setUsers(users.map(u => u.email === email ? { ...u, plan } : u));
+    const updatedUser = users.find(u => u.email === email);
+    if (updatedUser) {
+        const newUser = { ...updatedUser, plan };
+        setUsers(users.map(u => u.email === email ? newUser : u));
+        if (currentUser?.email === email) {
+            setCurrentUser(newUser);
+        }
+    }
   };
 
   return (
