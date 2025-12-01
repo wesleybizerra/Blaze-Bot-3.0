@@ -50,6 +50,14 @@ const Admin: React.FC = () => {
     if (window.confirm(confirmMsg)) {
         const totalHours = (days * 24) + hours + (mins / 60);
         addTime(email, totalHours);
+        
+        // Calculate estimated new date for feedback
+        const user = users.find(u => u.email === email);
+        if (user) {
+             const currentEnd = (user.trialEndsAt && user.trialEndsAt > Date.now()) ? user.trialEndsAt : Date.now();
+             const newEnd = currentEnd + (totalHours * 60 * 60 * 1000);
+             alert(`Tempo adicionado com sucesso!\nNovo vencimento: ${new Date(newEnd).toLocaleString()}`);
+        }
     }
   };
 

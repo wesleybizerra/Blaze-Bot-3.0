@@ -111,8 +111,8 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source?: 'L
   now.setMinutes(now.getMinutes() + 1); // 1 minuto para entrada rápida
   const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-  // 4. Probabilidade Alta (Assertividade Visual)
-  const probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94;
+  // 4. Probabilidade Alta (Assertividade Visual) - Ajustado range para 95-99
+  const probability = Math.floor(Math.random() * (99 - 95 + 1)) + 95;
 
   return {
     color: nextColor,
