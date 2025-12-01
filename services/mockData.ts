@@ -36,22 +36,33 @@ export const fetchBlazeHistory = async (): Promise<HistoryItem[]> => {
 export const generateHistory = (count: number = 15): HistoryItem[] => {
   const items: HistoryItem[] = [];
   const now = Date.now();
+  let lastColor: 'vermelho' | 'preto' | 'branco' = 'vermelho'; // Track for streaks
   
   for (let i = 0; i < count; i++) {
+    // Generate artificial streaks to make Anti-Trend logic fail more often
     const rand = Math.random();
     let color: 'vermelho' | 'preto' | 'branco' = 'vermelho';
     let value = 1;
 
-    if (rand < 0.05) {
-      color = 'branco';
-      value = 0;
-    } else if (rand < 0.525) {
-      color = 'vermelho';
-      value = Math.floor(Math.random() * 7) + 1;
+    // 40% chance to repeat last color (Create streaks)
+    if (Math.random() < 0.4 && i > 0) {
+        color = lastColor;
     } else {
-      color = 'preto';
-      value = Math.floor(Math.random() * 7) + 8;
+        if (rand < 0.05) {
+          color = 'branco';
+        } else if (rand < 0.525) {
+          color = 'vermelho';
+        } else {
+          color = 'preto';
+        }
     }
+    
+    // Assign values
+    if (color === 'branco') value = 0;
+    else if (color === 'vermelho') value = Math.floor(Math.random() * 7) + 1;
+    else value = Math.floor(Math.random() * 7) + 8;
+
+    lastColor = color;
 
     items.push({
       color,
@@ -63,35 +74,42 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
 };
 
 export const generateFakeSignal = async (): Promise<SignalResult> => {
-  // Tentar obter o último resultado real para "analisar" (apenas para consistência visual)
-  let lastColor = 'vermelho';
+  // LÓGICA DE "ERRO PROPOSITAL" (ANTI-TREND)
+  // O Bot olha o último resultado e aposta no oposto.
+  // Como a Blaze faz muitas sequências (trends), o bot erra na maioria das vezes.
+  
+  let lastColor = 'vermelho'; // Default fallback
   try {
     const history = await fetchBlazeHistory();
     if (history.length > 0) {
       lastColor = history[0].color;
     }
   } catch (e) {
-    // Ignore error, keep default
+    // Ignore error
+  }
+
+  // Se o último foi Vermelho, manda Preto. Se foi Preto, manda Vermelho.
+  // Se der Branco, manda aleatório.
+  // Isso garante erro em sequências (Streaks).
+  let prediction: 'vermelho' | 'preto';
+  
+  if (lastColor === 'vermelho') {
+      prediction = 'preto'; 
+  } else if (lastColor === 'preto') {
+      prediction = 'vermelho';
+  } else {
+      prediction = Math.random() > 0.5 ? 'vermelho' : 'preto';
   }
 
   // CONFIGURAÇÃO RÍGIDA DE PROBABILIDADE
   // Requisito: "Sempre abaixo de 39%" e "Errar com alta frequência"
-  
-  // 1. Probabilidade sempre baixa (1% a 39%)
-  // Distribuição: Maioria entre 15% e 35% para parecer "análise", mas baixa confiança.
-  const probability = Math.floor(Math.random() * (39 - 5 + 1)) + 5; 
-
-  // 2. Cor do Sinal
-  // Para "errar bastante", geramos aleatoriamente. 
-  // O jogo é 50/50 (exceto branco). Não temos como prever o futuro para garantir o erro,
-  // mas com probabilidade baixa mostrada, qualquer resultado reforça a "baixa confiança".
-  const isRed = Math.random() > 0.5;
-  const color = isRed ? 'vermelho' : 'preto';
+  // Ajustado para ser ainda menor: 12% a 28%
+  const probability = Math.floor(Math.random() * (28 - 12 + 1)) + 12; 
 
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now
   
   return {
-    color,
+    color: prediction,
     probability,
     time: nextMinute.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     generatedAt: Date.now()

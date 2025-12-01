@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
-import { Zap, History, User, CreditCard, Shield, Activity, Cpu, Wifi } from 'lucide-react';
+import { Zap, History, User, CreditCard, Shield, Activity, Cpu, Wifi, AlertOctagon } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -41,15 +41,16 @@ const Dashboard: React.FC = () => {
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
                 </div>
-                <span className="text-[10px] text-celestial-400 font-mono uppercase">API Blaze</span>
+                <span className="text-[10px] text-celestial-400 font-mono uppercase">Online</span>
             </div>
             <div className="bg-celestial-900/40 p-2 rounded-lg border border-celestial-800 flex flex-col items-center justify-center gap-1 text-center">
                 <Cpu size={16} className="text-blue-400" />
-                <span className="text-[10px] text-celestial-400 font-mono uppercase">IA Neural</span>
+                <span className="text-[10px] text-celestial-400 font-mono uppercase">IA v3.2</span>
             </div>
-            <div className="bg-celestial-900/40 p-2 rounded-lg border border-celestial-800 flex flex-col items-center justify-center gap-1 text-center">
-                <Activity size={16} className="text-purple-400" />
-                <span className="text-[10px] text-celestial-400 font-mono uppercase">14ms Lat.</span>
+            {/* Volatility Indicator - Justifies errors */}
+            <div className="bg-red-950/30 p-2 rounded-lg border border-red-900/50 flex flex-col items-center justify-center gap-1 text-center animate-pulse">
+                <AlertOctagon size={16} className="text-red-500" />
+                <span className="text-[10px] text-red-400 font-mono uppercase font-bold">Vol: CRÍTICA</span>
             </div>
         </div>
 

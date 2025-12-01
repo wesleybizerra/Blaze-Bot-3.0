@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { generateFakeSignal } from '../services/mockData';
 import { BLAZE_HISTORY_URL } from '../constants';
 import { SignalResult } from '../types';
-import { Loader2, Lock, AlertTriangle } from 'lucide-react';
+import { Loader2, Lock, AlertTriangle, Skull } from 'lucide-react';
 
 const Signals: React.FC = () => {
   const navigate = useNavigate();
@@ -22,16 +22,16 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Conectando API Blaze...",
-      "Sincronizando histórico...",
-      "Identificando padrões de cores...",
-      "Calculando probabilidades...",
-      "Gerando entrada..."
+      "Lendo API Blaze v2...",
+      "Detectando quebra de padrão...",
+      "Volatilidade EXTREMA detectada...",
+      "Calculando risco de reversão...",
+      "Sinal de baixa confiança gerado..."
     ];
 
     for (const step of steps) {
       setAnalysisStep(step);
-      await new Promise(r => setTimeout(r, 600)); // 0.6s per step
+      await new Promise(r => setTimeout(r, 700)); // Slower for drama
     }
 
     // Now async to allow fetching real data if needed
@@ -71,12 +71,12 @@ const Signals: React.FC = () => {
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-white">Gerador Double</h2>
           <p className="text-xs text-celestial-400">
-            Analisando: <a href={BLAZE_HISTORY_URL} target="_blank" rel="noopener noreferrer" className="underline hover:text-white">Histórico Oficial</a>
+            Fonte: <a href={BLAZE_HISTORY_URL} target="_blank" rel="noopener noreferrer" className="underline hover:text-white">API Blaze Oficial</a>
           </p>
         </div>
 
         {/* Signal Display Area */}
-        <div className="min-h-[300px] flex flex-col items-center justify-center bg-celestial-800/50 border border-celestial-600 rounded-3xl p-6 relative overflow-hidden shadow-inner shadow-black/50">
+        <div className="min-h-[320px] flex flex-col items-center justify-center bg-celestial-800/50 border border-celestial-600 rounded-3xl p-6 relative overflow-hidden shadow-inner shadow-black/50">
           
           {loading ? (
             <div className="text-center space-y-4 animate-pulse">
@@ -85,30 +85,40 @@ const Signals: React.FC = () => {
             </div>
           ) : signal ? (
             <div className="w-full text-center space-y-6 animate-scale-in">
+              
+              {/* Aggressive Warning Banner */}
+              <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse">
+                <Skull size={16} className="text-red-400" />
+                <span className="text-xs font-black text-red-200 uppercase tracking-widest">MERCADO INSTÁVEL</span>
+                <Skull size={16} className="text-red-400" />
+              </div>
+
               <div className="space-y-2">
-                <p className="text-celestial-400 text-sm font-bold uppercase tracking-widest">Entrada Confirmada</p>
+                <p className="text-celestial-400 text-sm font-bold uppercase tracking-widest">Entrada Identificada</p>
                 <div className={`text-5xl font-extrabold ${signal.color === 'vermelho' ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'text-slate-200 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]'}`}>
                   {signal.color === 'vermelho' ? '🔴 VERMELHO' : '⚫ PRETO'}
                 </div>
               </div>
 
               <div className="bg-celestial-900/50 rounded-xl p-4 border border-celestial-700/50 inline-block w-full max-w-[200px]">
-                <p className="text-xs text-celestial-400 mb-1">Horário Limite</p>
+                <p className="text-xs text-celestial-400 mb-1">Entrar até:</p>
                 <p className="text-3xl font-mono text-white font-bold">{signal.time}</p>
               </div>
 
               {/* Probability Display - ALWAYS Low/Warn */}
               <div className="flex flex-col gap-1 items-center">
-                  <div className={`flex items-center justify-center gap-2 text-xs px-4 py-1.5 rounded-full mx-auto w-max border text-yellow-500/90 bg-yellow-900/20 border-yellow-900/40`}>
+                  <div className={`flex items-center justify-center gap-2 text-xs px-4 py-1.5 rounded-full mx-auto w-max border text-red-400 bg-red-950/30 border-red-800/40`}>
                     <AlertTriangle size={14} />
                     <span className="font-bold">Probabilidade: {signal.probability}%</span>
                   </div>
-                  <span className="text-[10px] text-red-400/80 uppercase tracking-wide font-bold">Risco Elevado - Baixa Confiança</span>
+                  <span className="text-[10px] text-red-500 uppercase tracking-wide font-extrabold mt-1">
+                    ⚠️ ALTO RISCO DE LOSS
+                  </span>
               </div>
             </div>
           ) : (
             <div className="text-center opacity-50">
-              <p className="text-celestial-400">Aguardando solicitação...</p>
+              <p className="text-celestial-400">Clique abaixo para analisar</p>
             </div>
           )}
         </div>
@@ -117,7 +127,7 @@ const Signals: React.FC = () => {
         {!loading && (
           <button
             onClick={performAnalysis}
-            className="w-full py-5 bg-gradient-to-r from-celestial-500 to-cyan-600 text-white font-black text-xl rounded-2xl shadow-lg shadow-cyan-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-wide"
+            className="w-full py-5 bg-gradient-to-r from-celestial-600 to-cyan-700 text-white font-black text-xl rounded-2xl shadow-lg shadow-cyan-900/30 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-wide border-t border-white/10"
           >
             Gerar Sinal
           </button>
