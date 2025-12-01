@@ -5,7 +5,11 @@ import { useApp } from '../context/AppContext';
 import { generateFakeSignal } from '../services/mockData';
 import { BLAZE_HISTORY_URL } from '../constants';
 import { SignalResult } from '../types';
-import { Loader2, Lock, CheckCircle, TrendingUp } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, TrendingUp, Wifi, WifiOff } from 'lucide-react';
+
+interface ExtendedSignal extends SignalResult {
+    source?: 'LIVE' | 'SIMULATED';
+}
 
 const Signals: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +17,7 @@ const Signals: React.FC = () => {
   const hasAccess = checkAccess();
 
   const [loading, setLoading] = useState(false);
-  const [signal, setSignal] = useState<SignalResult | null>(null);
+  const [signal, setSignal] = useState<ExtendedSignal | null>(null);
   const [analysisStep, setAnalysisStep] = useState('');
 
   // Fake analysis steps for persuasion
@@ -22,16 +26,16 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
+      "Conectando API Blaze...",
       "Filtrando Ruído (Brancos)...",
-      "Analisando Fluxo Smart Flow...",
-      "Comparando Último vs Penúltimo...",
-      "Verificando Tendência ou Xadrez...",
-      "Gerando Entrada de Alta Precisão..."
+      "Analisando Padrão Smart Flow...",
+      "Calculando Probabilidade...",
+      "Confirmando Entrada..."
     ];
 
     for (const step of steps) {
       setAnalysisStep(step);
-      await new Promise(r => setTimeout(r, 600)); 
+      await new Promise(r => setTimeout(r, 500)); 
     }
 
     const newSignal = await generateFakeSignal();
@@ -116,6 +120,21 @@ const Signals: React.FC = () => {
                   <div className="w-full max-w-[150px] bg-gray-700 rounded-full h-1.5 mt-2">
                     <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${signal.probability}%` }}></div>
                   </div>
+              </div>
+
+              {/* Data Source Indicator */}
+              <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-50">
+                  {signal.source === 'LIVE' ? (
+                      <>
+                        <Wifi size={12} className="text-green-500" />
+                        <span className="text-[10px] text-green-500 font-mono">LIVE DATA</span>
+                      </>
+                  ) : (
+                      <>
+                        <WifiOff size={12} className="text-yellow-500" />
+                        <span className="text-[10px] text-yellow-500 font-mono">SIMULATION MODE</span>
+                      </>
+                  )}
               </div>
             </div>
           ) : (
