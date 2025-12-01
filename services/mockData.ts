@@ -150,11 +150,14 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source: 'LI
 
   const nextMinute = new Date(Date.now() + 60000);
   
-  return {
+  // Explicit cast to ensure TS matches SignalResult type exactly
+  const result: SignalResult & { source: 'LIVE' | 'SIMULATED' } = {
     color: prediction,
     probability,
     time: nextMinute.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     generatedAt: Date.now(),
     source: historyResult.source
   };
+
+  return result;
 };
