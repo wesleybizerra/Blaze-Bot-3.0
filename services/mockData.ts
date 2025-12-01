@@ -43,9 +43,9 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
     let color: 'vermelho' | 'preto' | 'branco' = 'vermelho';
     let value = 1;
 
-    // HIGH STREAK GENERATION (Make history look trendy)
-    // 60% chance to repeat last color
-    if (Math.random() < 0.6 && i > 0 && lastColor !== 'branco') {
+    // EXTREME STREAK GENERATION (Momentum Simulation)
+    // 80% chance to repeat last color to simulate strong trends
+    if (Math.random() < 0.8 && i > 0 && lastColor !== 'branco') {
         color = lastColor;
     } else {
         if (rand < 0.05) {
@@ -74,8 +74,9 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
 };
 
 export const generateFakeSignal = async (): Promise<SignalResult> => {
-  // LÓGICA DE ALTA ASSERTIVIDADE (TREND SURFING)
-  // Estratégia: Seguir a tendência. Se está dando vermelho, aposta vermelho.
+  // LÓGICA DE "MOMENTUM LOCK" (Trava de Tendência)
+  // Estratégia: Seguir cegamente a última cor.
+  // Efeito: Se der sequência (Streak), acerta TUDO. Se der Xadrez (Chop), erra TUDO.
   
   let history: HistoryItem[] = [];
   try {
@@ -84,39 +85,24 @@ export const generateFakeSignal = async (): Promise<SignalResult> => {
     history = generateHistory(15);
   }
 
-  // Analisa o histórico recente para identificar padrões de repetição
   const lastResult = history[0];
-  const penultResult = history[1];
   
   let prediction: 'vermelho' | 'preto';
   let probability = 0;
 
-  // Lógica de "Surf" (Surfar na onda)
-  if (lastResult.color === penultResult.color && lastResult.color !== 'branco') {
-      // Sequência detectada (ex: Vermelho, Vermelho)
-      // Aposta na continuação da sequência (MUITO FORTE NA BLAZE)
-      prediction = lastResult.color;
-      probability = Math.floor(Math.random() * (99 - 92 + 1)) + 92; // 92% a 99%
-  } else if (lastResult.color === 'branco') {
-      // Pós-Branco geralmente repete a cor anterior ao branco ou alterna
-      // Vamos alternar para evitar double-white loss
-      prediction = penultResult.color === 'vermelho' ? 'preto' : 'vermelho';
-      probability = Math.floor(Math.random() * (95 - 88 + 1)) + 88;
+  // Lógica de Repetição Pura
+  if (lastResult.color === 'branco') {
+      // Se veio branco, olha a cor anterior e mantém o fluxo
+      const penultResult = history[1] || { color: 'vermelho' };
+      prediction = penultResult.color === 'preto' ? 'preto' : 'vermelho';
+      // Branco gera instabilidade, probabilidade levemente menor visualmente
+      probability = Math.floor(Math.random() * (92 - 85 + 1)) + 85; 
   } else {
-      // Sem sequência clara, analisa maioria dos últimos 10 (Trend Following)
-      let redCount = 0;
-      let blackCount = 0;
-      history.slice(0, 10).forEach(h => {
-          if (h.color === 'vermelho') redCount++;
-          if (h.color === 'preto') blackCount++;
-      });
-
-      if (redCount >= blackCount) {
-          prediction = 'vermelho';
-      } else {
-          prediction = 'preto';
-      }
-      probability = Math.floor(Math.random() * (94 - 85 + 1)) + 85; // 85% a 94%
+      // Se foi cor normal, manda entrar NELA MESMA.
+      // Isso garante aproveitar streaks de 5, 6, 10 cores iguais.
+      prediction = lastResult.color;
+      // Probabilidade visual altíssima para encorajar a entrada no fluxo
+      probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94; 
   }
 
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now

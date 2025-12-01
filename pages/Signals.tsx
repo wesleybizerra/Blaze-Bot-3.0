@@ -22,11 +22,11 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Conectando Neural v4...",
-      "Identificando Padrão de Fluxo...",
-      "Calculando Probabilidade de Win...",
-      "Confirmando Tendência Alta...",
-      "Gerando entrada de Precisão..."
+      "Escaneando Histórico Recente...",
+      "Identificando Momentum de Força...",
+      "Detectando Padrão de Repetição...",
+      "Calculando Extensão da Sequência...",
+      "CONFIRMADO: Tendência Forte..."
     ];
 
     for (const step of steps) {
@@ -91,7 +91,7 @@ const Signals: React.FC = () => {
               {/* High Confidence Banner */}
               <div className="bg-emerald-900/40 border border-emerald-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <CheckCircle size={16} className="text-emerald-400" />
-                <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">ALTA ASSERTIVIDADE</span>
+                <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">ALTA TENDÊNCIA</span>
                 <CheckCircle size={16} className="text-emerald-400" />
               </div>
 
@@ -111,7 +111,7 @@ const Signals: React.FC = () => {
               <div className="flex flex-col gap-1 items-center">
                   <div className={`flex items-center justify-center gap-2 text-xs px-4 py-1.5 rounded-full mx-auto w-max border text-emerald-400 bg-emerald-950/30 border-emerald-800/40`}>
                     <TrendingUp size={14} />
-                    <span className="font-bold">Confiança: {signal.probability}%</span>
+                    <span className="font-bold">Probabilidade: {signal.probability}%</span>
                   </div>
                   <div className="w-full max-w-[150px] bg-gray-700 rounded-full h-1.5 mt-2">
                     <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${signal.probability}%` }}></div>
