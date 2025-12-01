@@ -11,8 +11,8 @@ const HistoryPage: React.FC = () => {
 
   const loadData = async () => {
     // Keep loading state mostly for initial load or manual refresh
-    const data = await fetchBlazeHistory();
-    setHistory(data);
+    const result = await fetchBlazeHistory();
+    setHistory(result.data);
     setLoading(false);
   };
 
