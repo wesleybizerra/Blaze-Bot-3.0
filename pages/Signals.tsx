@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
-import { generateFakeSignal, generateHistory } from '../services/mockData';
+import { generateFakeSignal } from '../services/mockData';
 import { BLAZE_HISTORY_URL } from '../constants';
 import { SignalResult } from '../types';
 import { Loader2, Lock, AlertTriangle } from 'lucide-react';
@@ -22,8 +22,8 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Conectando ao servidor...",
-      "Lendo histórico recente...",
+      "Conectando API Blaze...",
+      "Sincronizando histórico...",
       "Identificando padrões de cores...",
       "Calculando probabilidades...",
       "Gerando entrada..."
@@ -34,15 +34,8 @@ const Signals: React.FC = () => {
       await new Promise(r => setTimeout(r, 600)); // 0.6s per step
     }
 
-    const result = generateFakeSignal();
-    
-    // Explicitly casting or creating the object to satisfy TypeScript and State
-    const newSignal: SignalResult = {
-      color: result.color,
-      probability: result.probability,
-      time: result.time,
-      generatedAt: Date.now()
-    };
+    // Now async to allow fetching real data if needed
+    const newSignal = await generateFakeSignal();
 
     setSignal(newSignal);
     setLoading(false);
@@ -104,10 +97,13 @@ const Signals: React.FC = () => {
                 <p className="text-3xl font-mono text-white font-bold">{signal.time}</p>
               </div>
 
-              {/* Probability Display */}
-              <div className={`flex items-center justify-center gap-2 text-xs px-3 py-1 rounded-full mx-auto w-max border ${signal.probability <= 39 ? 'text-yellow-500/80 bg-yellow-900/20 border-yellow-900/30' : 'text-green-400/80 bg-green-900/20 border-green-900/30'}`}>
-                <AlertTriangle size={12} />
-                <span>Probabilidade estimada: {signal.probability}%</span>
+              {/* Probability Display - ALWAYS Low/Warn */}
+              <div className="flex flex-col gap-1 items-center">
+                  <div className={`flex items-center justify-center gap-2 text-xs px-4 py-1.5 rounded-full mx-auto w-max border text-yellow-500/90 bg-yellow-900/20 border-yellow-900/40`}>
+                    <AlertTriangle size={14} />
+                    <span className="font-bold">Probabilidade: {signal.probability}%</span>
+                  </div>
+                  <span className="text-[10px] text-red-400/80 uppercase tracking-wide font-bold">Risco Elevado - Baixa Confiança</span>
               </div>
             </div>
           ) : (
