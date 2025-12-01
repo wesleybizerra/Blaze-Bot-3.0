@@ -31,8 +31,20 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
 };
 
 export const generateFakeSignal = () => {
-  // Intentional low probability as per requirements
-  const probability = Math.floor(Math.random() * (39 - 25) + 25); // Between 25% and 39%
+  // Configuração de Probabilidade Ponderada
+  // Objetivo: Mais sinais de 39% ou menos (indicar erro/baixa confiança)
+  
+  const isLowProbability = Math.random() < 0.85; // 85% de chance de cair na faixa baixa
+  let probability;
+
+  if (isLowProbability) {
+    // Faixa Baixa: 1% a 39%
+    probability = Math.floor(Math.random() * (39 - 1 + 1)) + 1;
+  } else {
+    // Faixa Alta (Raro): 40% a 95%
+    probability = Math.floor(Math.random() * (95 - 40 + 1)) + 40;
+  }
+
   const isRed = Math.random() > 0.5;
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now
   

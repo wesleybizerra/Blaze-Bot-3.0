@@ -35,15 +35,16 @@ const Signals: React.FC = () => {
     }
 
     const result = generateFakeSignal();
-    // Force specific requested result constraints (Black/Red only, probability <= 39%)
-    // The generateFakeSignal helper already handles the logic, but ensuring here.
     
-    setSignal({
+    // Explicitly casting or creating the object to satisfy TypeScript and State
+    const newSignal: SignalResult = {
       color: result.color,
       probability: result.probability,
       time: result.time,
       generatedAt: Date.now()
-    });
+    };
+
+    setSignal(newSignal);
     setLoading(false);
   };
 
@@ -103,8 +104,8 @@ const Signals: React.FC = () => {
                 <p className="text-3xl font-mono text-white font-bold">{signal.time}</p>
               </div>
 
-              {/* Fake Low Probability Display */}
-              <div className="flex items-center justify-center gap-2 text-xs text-yellow-500/80 bg-yellow-900/20 px-3 py-1 rounded-full mx-auto w-max border border-yellow-900/30">
+              {/* Probability Display */}
+              <div className={`flex items-center justify-center gap-2 text-xs px-3 py-1 rounded-full mx-auto w-max border ${signal.probability <= 39 ? 'text-yellow-500/80 bg-yellow-900/20 border-yellow-900/30' : 'text-green-400/80 bg-green-900/20 border-green-900/30'}`}>
                 <AlertTriangle size={12} />
                 <span>Probabilidade estimada: {signal.probability}%</span>
               </div>
