@@ -74,37 +74,43 @@ export const generateHistory = (count: number = 15): HistoryItem[] => {
 };
 
 export const generateFakeSignal = async (): Promise<SignalResult> => {
-  // LÓGICA DE "ERRO PROPOSITAL" (ANTI-TREND)
-  // O Bot olha o último resultado e aposta no oposto.
-  // Como a Blaze faz muitas sequências (trends), o bot erra na maioria das vezes.
+  // LÓGICA DE "REVERSÃO DE MAIORIA" (MAJORITY REVERSAL)
+  // Estratégia de Erro: O Bot olha os últimos 5 resultados.
+  // Se a maioria for Vermelho, ele aposta Preto (e vice-versa).
+  // Em mercados de tendência (Blaze), apostar contra a maioria recente costuma gerar LOSS.
   
-  let lastColor = 'vermelho'; // Default fallback
+  let history: HistoryItem[] = [];
   try {
-    const history = await fetchBlazeHistory();
-    if (history.length > 0) {
-      lastColor = history[0].color;
-    }
+    history = await fetchBlazeHistory();
   } catch (e) {
-    // Ignore error
+    history = generateHistory(15);
   }
 
-  // Se o último foi Vermelho, manda Preto. Se foi Preto, manda Vermelho.
-  // Se der Branco, manda aleatório.
-  // Isso garante erro em sequências (Streaks).
+  let redCount = 0;
+  let blackCount = 0;
+
+  // Analisa os últimos 5
+  const recent = history.slice(0, 5);
+  recent.forEach(h => {
+      if (h.color === 'vermelho') redCount++;
+      if (h.color === 'preto') blackCount++;
+  });
+
   let prediction: 'vermelho' | 'preto';
-  
-  if (lastColor === 'vermelho') {
-      prediction = 'preto'; 
-  } else if (lastColor === 'preto') {
+
+  // Se tem muito Vermelho, aposta Preto (tentando adivinhar o fim da tendência -> Erro comum)
+  if (redCount > blackCount) {
+      prediction = 'preto';
+  } else if (blackCount > redCount) {
       prediction = 'vermelho';
   } else {
+      // Se tiver igual ou branco, aleatório 50/50
       prediction = Math.random() > 0.5 ? 'vermelho' : 'preto';
   }
 
   // CONFIGURAÇÃO RÍGIDA DE PROBABILIDADE
-  // Requisito: "Sempre abaixo de 39%" e "Errar com alta frequência"
-  // Ajustado para ser ainda menor: 12% a 28%
-  const probability = Math.floor(Math.random() * (28 - 12 + 1)) + 12; 
+  // Baixíssima assertividade visual: 2% a 25%
+  const probability = Math.floor(Math.random() * (25 - 2 + 1)) + 2; 
 
   const nextMinute = new Date(Date.now() + 60000); // Signal for 1 minute from now
   

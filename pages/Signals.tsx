@@ -22,11 +22,11 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Lendo API Blaze v2...",
-      "Detectando quebra de padrão...",
-      "Volatilidade EXTREMA detectada...",
-      "Calculando risco de reversão...",
-      "Sinal de baixa confiança gerado..."
+      "Conectando Neural v4...",
+      "Calculando média móvel (SMA-20)...",
+      "Identificando Exaustão de Tendência...",
+      "Aplicando filtro de Reversão...",
+      "Gerando entrada de contra-fluxo..."
     ];
 
     for (const step of steps) {
@@ -89,7 +89,7 @@ const Signals: React.FC = () => {
               {/* Aggressive Warning Banner */}
               <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse">
                 <Skull size={16} className="text-red-400" />
-                <span className="text-xs font-black text-red-200 uppercase tracking-widest">MERCADO INSTÁVEL</span>
+                <span className="text-xs font-black text-red-200 uppercase tracking-widest">REVERSÃO ARRISCADA</span>
                 <Skull size={16} className="text-red-400" />
               </div>
 
@@ -112,7 +112,7 @@ const Signals: React.FC = () => {
                     <span className="font-bold">Probabilidade: {signal.probability}%</span>
                   </div>
                   <span className="text-[10px] text-red-500 uppercase tracking-wide font-extrabold mt-1">
-                    ⚠️ ALTO RISCO DE LOSS
+                    ⚠️ PROBABILIDADE BAIXA
                   </span>
               </div>
             </div>
