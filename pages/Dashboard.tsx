@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
-import { Zap, History, User, CreditCard, Shield } from 'lucide-react';
+import { Zap, History, User, CreditCard, Shield, Activity, Cpu, Wifi } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -22,24 +22,52 @@ const Dashboard: React.FC = () => {
   return (
     <Layout showBack={false}>
       <div className="space-y-6">
-        <div className="bg-celestial-800/50 border border-celestial-700 p-4 rounded-xl">
-          <h2 className="text-xl font-bold text-white">Olá, {currentUser?.name || 'Usuário'}</h2>
-          <p className="text-celestial-400 text-sm mt-1">
-            Plano atual: <span className="font-semibold uppercase">{currentUser?.plan}</span>
+        {/* User Welcome Card */}
+        <div className="bg-celestial-800/50 border border-celestial-700 p-4 rounded-xl shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-celestial-500/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+          <h2 className="text-xl font-bold text-white relative z-10">Olá, {currentUser?.name || 'Usuário'}</h2>
+          <p className="text-celestial-400 text-sm mt-1 relative z-10">
+            Plano atual: <span className="font-semibold uppercase text-celestial-200">{currentUser?.plan}</span>
           </p>
         </div>
 
+        {/* System Status Indicators */}
+        <div className="grid grid-cols-3 gap-2">
+            <div className="bg-celestial-900/40 p-2 rounded-lg border border-celestial-800 flex flex-col items-center justify-center gap-1 text-center">
+                <div className="relative">
+                    <Wifi size={16} className="text-green-500" />
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                </div>
+                <span className="text-[10px] text-celestial-400 font-mono uppercase">API Blaze</span>
+            </div>
+            <div className="bg-celestial-900/40 p-2 rounded-lg border border-celestial-800 flex flex-col items-center justify-center gap-1 text-center">
+                <Cpu size={16} className="text-blue-400" />
+                <span className="text-[10px] text-celestial-400 font-mono uppercase">IA Neural</span>
+            </div>
+            <div className="bg-celestial-900/40 p-2 rounded-lg border border-celestial-800 flex flex-col items-center justify-center gap-1 text-center">
+                <Activity size={16} className="text-purple-400" />
+                <span className="text-[10px] text-celestial-400 font-mono uppercase">14ms Lat.</span>
+            </div>
+        </div>
+
+        {/* Menu Grid */}
         <div className="grid grid-cols-1 gap-4">
           {menuItems.map((item, index) => (
             <button
               key={index}
               onClick={() => navigate(item.path)}
-              className={`${item.color} p-6 rounded-2xl shadow-lg border border-celestial-700/50 flex items-center gap-4 hover:scale-[1.02] transition-transform group`}
+              className={`${item.color} p-6 rounded-2xl shadow-lg border border-celestial-700/50 flex items-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden`}
             >
-              <div className="bg-celestial-950/30 p-3 rounded-full text-white group-hover:text-celestial-300 transition-colors">
+              {/* Subtle shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              <div className="bg-celestial-950/30 p-3 rounded-full text-white group-hover:text-celestial-300 transition-colors z-10 shadow-inner shadow-black/30">
                 {item.icon}
               </div>
-              <span className="text-lg font-bold text-white tracking-wide">{item.label}</span>
+              <span className="text-lg font-bold text-white tracking-wide z-10">{item.label}</span>
             </button>
           ))}
         </div>
