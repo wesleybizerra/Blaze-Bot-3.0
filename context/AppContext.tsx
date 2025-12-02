@@ -1,130 +1,153 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, PlanType, GlobalState } from '../types';
 import { ADMIN_EMAILS, PREMIUM_WHITELIST } from '../constants';
+import { auth, db } from '../services/firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  onSnapshot, 
+  collection 
+} from 'firebase/firestore';
 
 interface AppContextType extends GlobalState {
   checkAccess: () => boolean;
   addTime: (email: string, hours: number) => void;
   setPlan: (email: string, plan: PlanType) => void;
+  loadingAuth: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Initial admin user with requested password
-const INITIAL_USERS: User[] = [
-  {
-    email: 'wesleybizerra@hotmail.com',
-    password: 'Cadernorox@27',
-    name: 'Admin Master',
-    phone: '000000000',
-    birthDate: '1990-01-01',
-    plan: PlanType.PREMIUM,
-    trialEndsAt: null,
-    isBlocked: false
-  },
-  {
-    email: 'wesleybizerra1@gmail.com',
-    password: '123', // Default simple pass for secondary admin
-    name: 'Admin User',
-    phone: '000000000',
-    birthDate: '1990-01-01',
-    plan: PlanType.PREMIUM,
-    trialEndsAt: null,
-    isBlocked: false
-  }
-];
-
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Load from local storage to persist accounts across updates
-  const [users, setUsers] = useState<User[]>(() => {
-    const savedUsers = localStorage.getItem('blaze_users_v2');
-    if (savedUsers) {
-      return JSON.parse(savedUsers);
-    }
-    return INITIAL_USERS;
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const savedSession = localStorage.getItem('blaze_current_user');
-    return savedSession ? JSON.parse(savedSession) : null;
-  });
-
-  // Persist users whenever they change
+  // 1. Monitorar todos os usuários em tempo real (Sync Admin)
   useEffect(() => {
-    localStorage.setItem('blaze_users_v2', JSON.stringify(users));
-  }, [users]);
+    const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+      const usersList: User[] = [];
+      snapshot.forEach((doc) => {
+        usersList.push(doc.data() as User);
+      });
+      setUsers(usersList);
+      
+      // Atualizar o usuário atual se os dados dele mudarem no banco
+      if (auth.currentUser) {
+        const myData = usersList.find(u => u.email === auth.currentUser?.email);
+        if (myData) setCurrentUser(myData);
+      }
+    });
 
-  // Persist current session
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Monitorar Estado de Autenticação (Login/Logout)
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('blaze_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('blaze_current_user');
-    }
-  }, [currentUser]);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser && firebaseUser.email) {
+        // Buscar dados complementares no Firestore
+        const docRef = doc(db, "users", firebaseUser.email);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setCurrentUser(docSnap.data() as User);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      setLoadingAuth(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Check if current user is admin
   const isAdmin = currentUser ? ADMIN_EMAILS.includes(currentUser.email) : false;
 
-  const register = (userData: Omit<User, 'plan' | 'trialEndsAt' | 'isBlocked'>) => {
-    // Check if user exists
-    if (users.find(u => u.email === userData.email)) {
-      alert('E-mail já cadastrado!');
-      return;
+  const register = async (userData: Omit<User, 'plan' | 'trialEndsAt' | 'isBlocked'>) => {
+    try {
+      if (!userData.email || !userData.password) {
+        alert("Email e senha são obrigatórios.");
+        return;
+      }
+
+      // Criar usuário no Firebase Auth
+      await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+
+      let initialPlan = PlanType.TRIAL;
+      // CRITICAL: Set 25 hours trial from NOW
+      let trialEnd = Date.now() + (25 * 60 * 60 * 1000); 
+
+      // Auto-activate Premium for whitelist
+      if (PREMIUM_WHITELIST.includes(userData.email)) {
+        initialPlan = PlanType.PREMIUM;
+        trialEnd = 0; // Not used for premium
+      }
+
+      const newUser: User = {
+        email: userData.email,
+        name: userData.name,
+        phone: userData.phone,
+        birthDate: userData.birthDate,
+        plan: initialPlan,
+        trialEndsAt: trialEnd,
+        isBlocked: false
+      };
+
+      // Salvar dados no Firestore usando o email como ID
+      await setDoc(doc(db, "users", userData.email), newUser);
+      
+      // O onSnapshot vai atualizar o estado automaticamente
+      // O onAuthStateChanged vai logar o usuário automaticamente
+    } catch (error: any) {
+      console.error("Erro ao cadastrar:", error);
+      if (error.code === 'auth/email-already-in-use') {
+        alert('Este e-mail já está em uso.');
+      } else {
+        alert('Erro ao criar conta: ' + error.message);
+      }
     }
-
-    let initialPlan = PlanType.TRIAL;
-    // CRITICAL: Set 25 hours trial from NOW
-    let trialEnd = Date.now() + (25 * 60 * 60 * 1000); 
-
-    // Auto-activate Premium for whitelist
-    if (PREMIUM_WHITELIST.includes(userData.email)) {
-      initialPlan = PlanType.PREMIUM;
-      trialEnd = 0; // Not used for premium
-    }
-
-    const newUser: User = {
-      ...userData,
-      plan: initialPlan,
-      trialEndsAt: trialEnd,
-      isBlocked: false
-    };
-
-    setUsers([...users, newUser]);
-    setCurrentUser(newUser);
   };
 
-  const login = (email: string, password?: string) => {
-    const user = users.find(u => u.email === email);
-    
-    if (!user) {
-      alert('Usuário não encontrado. Crie uma conta.');
-      return;
-    }
-
-    // Check password logic
-    if (user.password && password) {
-        if (user.password !== password) {
-            alert('Senha incorreta.');
-            return;
-        }
-    } else if (user.password && !password) {
-        alert('Por favor, digite sua senha.');
+  const login = async (email: string, password?: string) => {
+    if (!password) {
+        alert('Digite a senha.');
         return;
     }
-
-    setCurrentUser(user);
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // O onAuthStateChanged vai lidar com o resto
+    } catch (error: any) {
+        console.error("Erro ao logar:", error);
+        alert('Email ou senha incorretos.');
+    }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
+  const logout = async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Erro ao sair:", error);
+    }
   };
 
-  const updateUser = (email: string, data: Partial<User>) => {
-    setUsers(prevUsers => prevUsers.map(u => u.email === email ? { ...u, ...data } : u));
-    
-    if (currentUser?.email === email) {
-      setCurrentUser(prev => prev ? { ...prev, ...data } : null);
+  const updateUser = async (email: string, data: Partial<User>) => {
+    try {
+        const userRef = doc(db, "users", email);
+        await updateDoc(userRef, data);
+        alert('Perfil atualizado!');
+    } catch (error) {
+        console.error("Erro ao atualizar:", error);
+        alert('Erro ao atualizar perfil.');
     }
   };
 
@@ -148,35 +171,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Admin Actions
-  const addTime = (email: string, hours: number) => {
+  const addTime = async (email: string, hours: number) => {
     const user = users.find(u => u.email === email);
     if (!user) return;
 
-    // Extend trial or temporary access
-    // If expired, start from now. If active, add to current end time.
-    const currentEnd = (user.trialEndsAt && user.trialEndsAt > Date.now()) ? user.trialEndsAt : Date.now();
-    const newEnd = currentEnd + (hours * 60 * 60 * 1000);
-    
-    // If user was expired/no plan, set to TRIAL temporarily so logic works
-    const newPlan = user.plan === PlanType.PREMIUM || user.plan === PlanType.MONTHLY ? user.plan : PlanType.TRIAL;
+    try {
+        // Extend trial or temporary access
+        const currentEnd = (user.trialEndsAt && user.trialEndsAt > Date.now()) ? user.trialEndsAt : Date.now();
+        const newEnd = currentEnd + (hours * 60 * 60 * 1000);
+        
+        // Se o plano atual não for Premium/Mensal, garantir que é TRIAL para validar o tempo
+        const newPlan = (user.plan === PlanType.PREMIUM || user.plan === PlanType.MONTHLY) ? user.plan : PlanType.TRIAL;
 
-    const updatedUser = { ...user, trialEndsAt: newEnd, plan: newPlan };
-    
-    // Update both global list and current session if it matches
-    setUsers(prev => prev.map(u => u.email === email ? updatedUser : u));
-    if (currentUser?.email === email) {
-        setCurrentUser(updatedUser);
+        const userRef = doc(db, "users", email);
+        await updateDoc(userRef, {
+            trialEndsAt: newEnd,
+            plan: newPlan,
+            isBlocked: false
+        });
+    } catch (error) {
+        console.error("Erro ao adicionar tempo:", error);
+        alert("Erro ao salvar no banco de dados.");
     }
   };
 
-  const setPlan = (email: string, plan: PlanType) => {
-    const updatedUser = users.find(u => u.email === email);
-    if (updatedUser) {
-        const newUser = { ...updatedUser, plan };
-        setUsers(users.map(u => u.email === email ? newUser : u));
-        if (currentUser?.email === email) {
-            setCurrentUser(newUser);
-        }
+  const setPlan = async (email: string, plan: PlanType) => {
+    try {
+        const userRef = doc(db, "users", email);
+        await updateDoc(userRef, { plan });
+    } catch (error) {
+        console.error("Erro ao mudar plano:", error);
+        alert("Erro ao mudar plano.");
     }
   };
 
@@ -191,7 +216,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isAdmin,
       checkAccess,
       addTime,
-      setPlan
+      setPlan,
+      loadingAuth
     }}>
       {children}
     </AppContext.Provider>

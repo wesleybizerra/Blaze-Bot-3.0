@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Layout from '../components/Layout';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
-  const { login, register } = useApp();
+  const { login, register, currentUser, loadingAuth } = useApp();
   const [isLogin, setIsLogin] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form States
   const [email, setEmail] = useState('');
@@ -15,25 +16,39 @@ const Auth: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [birthDate, setBirthDate] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLogin) {
-      if (!email || !password) return alert('Digite email e senha');
-      login(email, password);
-      // Login function handles success/fail internally in context via alerts or state, 
-      // but in this mock, we assume success if no alert blocks it, so we need to check currentUser in useEffect or just navigate
-      // For simplicity in this mock structure:
-      setTimeout(() => {
-        // We can't easily check success here without refactoring context to return success/fail
-        // But since AppContext sets user immediately on success, we just redirect.
-        // A real app would wait for a promise.
-        const storedUser = localStorage.getItem('blaze_current_user');
-        if (storedUser) navigate('/dashboard');
-      }, 100);
-    } else {
-      if (!email || !password || !name || !phone || !birthDate) return alert('Preencha todos os campos');
-      register({ email, password, name, phone, birthDate });
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (!loadingAuth && currentUser) {
       navigate('/dashboard');
+    }
+  }, [currentUser, loadingAuth, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      if (isLogin) {
+        if (!email || !password) {
+            alert('Digite email e senha');
+            setIsSubmitting(false);
+            return;
+        }
+        await login(email, password);
+        // A navegação ocorre via useEffect quando currentUser mudar
+      } else {
+        if (!email || !password || !name || !phone || !birthDate) {
+             alert('Preencha todos os campos');
+             setIsSubmitting(false);
+             return;
+        }
+        await register({ email, password, name, phone, birthDate });
+        // A navegação ocorre via useEffect quando currentUser mudar
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -104,9 +119,10 @@ const Auth: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full bg-celestial-500 hover:bg-celestial-400 text-white font-bold py-3 rounded-lg shadow-lg shadow-celestial-500/20 transition-all mt-6"
+              disabled={isSubmitting}
+              className={`w-full bg-celestial-500 hover:bg-celestial-400 text-white font-bold py-3 rounded-lg shadow-lg shadow-celestial-500/20 transition-all mt-6 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLogin ? 'Entrar' : 'Cadastrar'}
+              {isSubmitting ? 'Processando...' : (isLogin ? 'Entrar' : 'Cadastrar')}
             </button>
           </form>
 
