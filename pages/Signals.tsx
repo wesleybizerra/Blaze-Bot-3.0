@@ -26,15 +26,15 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Carregando Engine Sniper v10...",
-      "Identificando Momentum de Mercado...",
-      "Calculando Probabilidade de Sequência...",
-      "Confirmando Entrada de Alta Precisão..."
+      "Carregando Estratégias MHI...",
+      "Analisando Padrões de Vela e Surf...",
+      "Verificando Ciclos de Minutos...",
+      "Confirmando Entrada Estratégica V11..."
     ];
 
     for (const step of steps) {
       setAnalysisStep(step);
-      await new Promise(r => setTimeout(r, 400)); 
+      await new Promise(r => setTimeout(r, 500)); 
     }
 
     // Passamos o histórico manual para o gerador usar como base
@@ -126,7 +126,7 @@ const Signals: React.FC = () => {
               <div className="bg-emerald-900/40 border border-emerald-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <CheckCircle size={16} className="text-emerald-400" />
                 <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">
-                    {signal.color === 'branco' ? 'ALERTA DE OPORTUNIDADE' : 'PADRÃO SNIPER DETECTADO'}
+                    {signal.color === 'branco' ? 'ALERTA DE OPORTUNIDADE' : 'ESTRATÉGIA CONFIRMADA'}
                 </span>
                 <CheckCircle size={16} className="text-emerald-400" />
               </div>
