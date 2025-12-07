@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
@@ -17,17 +16,19 @@ const HistoryPage: React.FC = () => {
     const result = await fetchBlazeHistory();
     const apiData = result.data;
     
-    // Se tiver histórico manual, usamos ele como prioritário e preenchemos o resto com API
-    // Para garantir que mostremos sempre as últimas rodadas reais
+    // Agora mostramos até 50 rodadas para análise completa
     let displayHistory = [...manualHistory];
     
-    if (displayHistory.length < 15) {
+    const MAX_ITEMS = 50;
+    
+    if (displayHistory.length < MAX_ITEMS) {
         // Preenche com API se faltar
-        const needed = 15 - displayHistory.length;
+        const needed = MAX_ITEMS - displayHistory.length;
         displayHistory = [...displayHistory, ...apiData.slice(0, needed)];
     }
     
-    setHistory(displayHistory);
+    // Garante o limite máximo
+    setHistory(displayHistory.slice(0, MAX_ITEMS));
     setLoading(false);
   };
 
@@ -54,7 +55,7 @@ const HistoryPage: React.FC = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-white">Histórico Recente</h2>
+            <h2 className="text-2xl font-bold text-white">Histórico (50)</h2>
             <button onClick={() => { setLoading(true); loadData(); }} className="p-2 bg-celestial-800 rounded-full hover:bg-celestial-700 transition">
                 <RefreshCw size={20} className={`text-celestial-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -64,20 +65,20 @@ const HistoryPage: React.FC = () => {
           {loading && history.length === 0 ? (
              <div className="text-center py-8 text-celestial-400">Carregando dados...</div>
           ) : (
-            <div className="grid grid-cols-5 gap-3 mb-4 animate-fade-in">
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 mb-4 animate-fade-in">
                 {history.map((item, idx) => (
                 <div 
                     key={idx} 
-                    className={`aspect-square rounded-lg flex items-center justify-center font-bold text-sm border-2 shadow-lg transition-all hover:scale-105 ${getColorClass(item.color)}`}
+                    className={`aspect-square rounded-md flex items-center justify-center font-bold text-xs border shadow-sm transition-all hover:scale-105 ${getColorClass(item.color)}`}
                 >
-                    {item.value || (item.color === 'branco' ? '0' : '-')}
+                    {item.value || (item.color === 'branco' ? '0' : '')}
                 </div>
                 ))}
             </div>
           )}
           
-          <p className="text-xs text-center text-celestial-400 mt-2 italic flex items-center justify-center gap-1">
-             Últimas rodadas (Manual + API)
+          <p className="text-[10px] text-center text-celestial-400 mt-2 italic flex items-center justify-center gap-1">
+             Análise profunda das últimas 50 rodadas
           </p>
         </div>
 

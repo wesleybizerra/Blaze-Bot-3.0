@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, PlanType, GlobalState, HistoryItem } from '../types';
 import { ADMIN_EMAILS, PREMIUM_WHITELIST } from '../constants';
@@ -42,8 +41,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: new Date().toISOString()
     };
     
-    // Mantém apenas os últimos 20 itens
-    setManualHistory(prev => [newItem, ...prev].slice(0, 20));
+    // Mantém agora os últimos 50 itens para análise profunda
+    setManualHistory(prev => [newItem, ...prev].slice(0, 50));
   };
 
   // 1. Monitorar todos os usuários em tempo real (Sync Admin)
