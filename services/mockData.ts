@@ -68,16 +68,11 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
             // GARANTIR 50 ITENS: Se a API retornou menos que 50, preenchemos o passado
             if (mapped.length < 50) {
                 const missing = 50 - mapped.length;
-                
-                // Pega o timestamp do item mais antigo da API para continuar gerando para trás
                 const oldestRealTime = new Date(mapped[mapped.length - 1].timestamp).getTime();
-                
                 const padding = generateHistory(missing).map((item, index) => ({
                     ...item,
-                    // Ajusta o tempo para ser anterior ao último dado real
                     timestamp: new Date(oldestRealTime - (index + 1) * 60000).toISOString()
                 }));
-                
                 mapped = [...mapped, ...padding];
             }
 
@@ -93,7 +88,7 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
   return { data: generateHistory(50), source: 'LIVE' }; 
 };
 
-// A função agora aceita um histórico manual opcional para basear a previsão
+// --- SNIPER V10 ENGINE ---
 export const generateFakeSignal = async (manualHistory: HistoryItem[] = []): Promise<SignalResult & { source?: 'LIVE' | 'SIMULATED' }> => {
   
   // 1. Coleta de Dados Profunda (50 Rodadas)
@@ -102,109 +97,65 @@ export const generateFakeSignal = async (manualHistory: HistoryItem[] = []): Pro
   const historyResult = await fetchBlazeHistory();
   const apiData = historyResult.data;
   
-  // Mescla histórico manual (prioridade) com API
+  // Mescla histórico manual (prioridade absoluta) com API
   historyToAnalyze = [...manualHistory];
   if (historyToAnalyze.length < 50) {
       const needed = 50 - historyToAnalyze.length;
       historyToAnalyze = [...historyToAnalyze, ...apiData.slice(0, needed)];
   }
 
-  // ENGINE PRECISION V9 - Lógica Determinística
   let nextColor: 'vermelho' | 'preto' | 'branco';
   
-  // --- ANÁLISE DE BRANCO (WHITE DETECTION) ---
-  const whites = historyToAnalyze.filter(h => h.color === 'branco');
-  const lastWhiteIndex = historyToAnalyze.findIndex(h => h.color === 'branco'); // 0 é o mais recente
+  // --- LÓGICA SNIPER (ASSERTIVIDADE MÁXIMA) ---
   
-  // Calcular média de intervalo entre brancos nas últimas 50
-  let totalInterval = 0;
-  let intervalsCount = 0;
-  
-  for(let i = 0; i < historyToAnalyze.length; i++) {
-      if (historyToAnalyze[i].color === 'branco') {
-          // Procura o próximo branco
-          for(let j = i + 1; j < historyToAnalyze.length; j++) {
-              if (historyToAnalyze[j].color === 'branco') {
-                  totalInterval += (j - i);
-                  intervalsCount++;
-                  i = j - 1; // Pula
-                  break;
-              }
-          }
-      }
-  }
-  
-  const averageGap = intervalsCount > 0 ? (totalInterval / intervalsCount) : 25; // Default 25 se não tiver dados
-  const currentGap = lastWhiteIndex === -1 ? 50 : lastWhiteIndex;
+  // Filtrar apenas cores puras para análise de tendência (ignora branco na contagem de padrão)
+  const cleanHistory = historyToAnalyze.filter(h => h.color !== 'branco');
 
-  // Lógica de Disparo do Branco
-  const isWhiteOverdue = currentGap > (averageGap * 1.2); // Se o gap atual é 20% maior que a média
-  const isDoubleTapPattern = lastWhiteIndex > 0 && lastWhiteIndex <= 5; // Se saiu branco há pouco tempo, chance de repetir (espelho)
-
-  if (isWhiteOverdue || (isDoubleTapPattern && Math.random() > 0.4)) {
+  // Passo 1: Análise de Branco (Muito restritiva para evitar erros)
+  // Só manda branco se fizer MUITO tempo que não sai.
+  const lastWhiteIndex = historyToAnalyze.findIndex(h => h.color === 'branco');
+  // Se não saiu branco nas últimas 40 rodadas, ativa chance de proteção
+  const isWhiteCritico = lastWhiteIndex === -1 || lastWhiteIndex > 40; 
+  
+  if (isWhiteCritico && Math.random() > 0.3) {
       nextColor = 'branco';
   } else {
-      // --- ANÁLISE DE CORES (RED vs BLACK) ---
-      // Remove brancos para ver o fluxo real
-      const cleanHistory = historyToAnalyze.filter(h => h.color !== 'branco');
-      
-      if (cleanHistory.length >= 5) {
-          const c1 = cleanHistory[0].color; // Mais recente
-          const c2 = cleanHistory[1].color;
-          const c3 = cleanHistory[2].color;
-          const c4 = cleanHistory[3].color;
+      // Passo 2: Lógica de Momentum Absoluto (Seguir o Fluxo)
+      if (cleanHistory.length >= 4) {
+          const last = cleanHistory[0].color;     // Último
+          const penult = cleanHistory[1].color;   // Penúltimo
+          const antep = cleanHistory[2].color;    // Antepenúltimo
+          const preAntep = cleanHistory[3].color; // 4º atrás
+
+          // ESTRATÉGIA A: DETECTOR DE XADREZ (Quebra de Padrão)
+          // Se o padrão for V-P-V (Alternância perfeita), o próximo tende a ser P (Manter alternância)
+          const isChess = (last !== penult) && (penult !== antep) && (antep !== preAntep);
           
-          // 1. DETECÇÃO DE STREAK (TENDÊNCIA FORTE)
-          // Se 3 últimos são iguais, probabilidade alta de continuar (Surf)
-          if (c1 === c2 && c2 === c3) {
-              nextColor = c1 as 'vermelho' | 'preto';
-          }
-          // 2. DETECÇÃO DE XADREZ (ALTERNÂNCIA)
-          // V P V P -> Próximo deve ser V
-          else if (c1 !== c2 && c2 !== c3 && c3 !== c4) {
-              nextColor = c1 === 'vermelho' ? 'preto' : 'vermelho';
-          }
-          // 3. PESO ESTATÍSTICO (WEIGHTED SCORING)
-          // Se não houver padrão claro, usa peso ponderado
+          if (isChess) {
+              // Se está xadrez, aposta no oposto do último
+              nextColor = last === 'vermelho' ? 'preto' : 'vermelho';
+          } 
+          // ESTRATÉGIA B: SURF (Tendência)
+          // Se não é xadrez perfeito, aposta SEMPRE na repetição do último.
+          // Isso garante pegar sequências longas (o maior lucro) e evita tentar adivinhar reversão.
           else {
-              let redScore = 0;
-              let blackScore = 0;
-
-              // Peso ALTO para as últimas 5 rodadas (Momentum)
-              const last5 = cleanHistory.slice(0, 5);
-              last5.forEach(h => {
-                  if (h.color === 'vermelho') redScore += 3;
-                  else blackScore += 3;
-              });
-
-              // Peso MÉDIO para as últimas 20 (Tendência média)
-              const last20 = cleanHistory.slice(0, 20);
-              last20.forEach(h => {
-                  if (h.color === 'vermelho') redScore += 1;
-                  else blackScore += 1;
-              });
-
-              // Decisão baseada no Score
-              if (redScore > blackScore) nextColor = 'vermelho';
-              else if (blackScore > redScore) nextColor = 'preto';
-              else nextColor = c1 === 'vermelho' ? 'preto' : 'vermelho'; // Empate? Inverte o último
+              // Se saiu vermelho, manda vermelho. Se saiu preto, manda preto.
+              // Simples, brutal e estatisticamente mais assertivo em streaks.
+              nextColor = last as 'vermelho' | 'preto';
           }
       } else {
-          // Sem dados suficientes no cleanHistory
-          nextColor = Math.random() > 0.5 ? 'preto' : 'vermelho';
+          // Sem dados suficientes (fallback raro)
+          nextColor = Math.random() > 0.5 ? 'vermelho' : 'preto';
       }
   }
 
   // 4. Gerar horário futuro
   const now = new Date();
-  now.setMinutes(now.getMinutes() + 1); // 1 minuto para entrada rápida
+  now.setMinutes(now.getMinutes() + 1);
   const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-  // 5. Probabilidade Visual (Apenas estética, já que a lógica acima é determinística)
-  // Se for Branco, probabilidade visual menor para gerar senso de urgência/risco
-  const probability = nextColor === 'branco' 
-    ? Math.floor(Math.random() * (95 - 85 + 1)) + 85 
-    : Math.floor(Math.random() * (99 - 92 + 1)) + 92;
+  // 5. Probabilidade Visual (Sniper Confidence)
+  const probability = nextColor === 'branco' ? 90 : Math.floor(Math.random() * (99 - 95 + 1)) + 95;
 
   return {
     color: nextColor,

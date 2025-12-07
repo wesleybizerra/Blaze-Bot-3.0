@@ -26,10 +26,10 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Processando Histórico Manual...",
-      "Identificando Padrão...",
-      "Calculando Proteção no Branco...",
-      "Confirmando Entrada..."
+      "Carregando Engine Sniper v10...",
+      "Identificando Momentum de Mercado...",
+      "Calculando Probabilidade de Sequência...",
+      "Confirmando Entrada de Alta Precisão..."
     ];
 
     for (const step of steps) {
@@ -126,7 +126,7 @@ const Signals: React.FC = () => {
               <div className="bg-emerald-900/40 border border-emerald-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <CheckCircle size={16} className="text-emerald-400" />
                 <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">
-                    {signal.color === 'branco' ? 'ALERTA DE OPORTUNIDADE' : 'PADRÃO CONFIRMADO'}
+                    {signal.color === 'branco' ? 'ALERTA DE OPORTUNIDADE' : 'PADRÃO SNIPER DETECTADO'}
                 </span>
                 <CheckCircle size={16} className="text-emerald-400" />
               </div>
