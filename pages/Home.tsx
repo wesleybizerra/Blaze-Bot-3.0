@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -16,7 +17,7 @@ const Home: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-celestial-300 font-bold">v8.3 FULL HISTORY</span>
+            <span className="text-[10px] uppercase tracking-widest text-celestial-300 font-bold">v9.0 PRECISION</span>
         </div>
 
         <div className="space-y-4 pt-12">

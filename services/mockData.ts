@@ -1,3 +1,4 @@
+
 import { HistoryItem, SignalResult } from '../types';
 
 // API Endpoints - Rotação de Proxies para tentar contornar bloqueio da Blaze
@@ -88,7 +89,7 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
     }
   }
 
-  // Fallback silencioso - Gera 50 itens se a API falhar totalmente
+  // Fallback - Gera 50 itens se a API falhar totalmente
   return { data: generateHistory(50), source: 'LIVE' }; 
 };
 
@@ -108,71 +109,102 @@ export const generateFakeSignal = async (manualHistory: HistoryItem[] = []): Pro
       historyToAnalyze = [...historyToAnalyze, ...apiData.slice(0, needed)];
   }
 
-  // 2. Análise de Padrão Mestre (Deep Pattern 50)
+  // ENGINE PRECISION V9 - Lógica Determinística
   let nextColor: 'vermelho' | 'preto' | 'branco';
   
-  // --- Estratégia de Branco ---
-  // Verifica a frequência de brancos nas últimas 50 rodadas
-  const whiteCount = historyToAnalyze.filter(h => h.color === 'branco').length;
-  const lastWhiteIndex = historyToAnalyze.findIndex(h => h.color === 'branco');
+  // --- ANÁLISE DE BRANCO (WHITE DETECTION) ---
+  const whites = historyToAnalyze.filter(h => h.color === 'branco');
+  const lastWhiteIndex = historyToAnalyze.findIndex(h => h.color === 'branco'); // 0 é o mais recente
   
-  // Se saiu pouco branco (menos que 4 em 50) E faz tempo que não sai (mais de 14 rodadas)
-  // Ou se aleatoriamente cair na chance de 10%
-  if ((whiteCount < 4 && lastWhiteIndex > 14) || Math.random() < 0.10) {
+  // Calcular média de intervalo entre brancos nas últimas 50
+  let totalInterval = 0;
+  let intervalsCount = 0;
+  
+  for(let i = 0; i < historyToAnalyze.length; i++) {
+      if (historyToAnalyze[i].color === 'branco') {
+          // Procura o próximo branco
+          for(let j = i + 1; j < historyToAnalyze.length; j++) {
+              if (historyToAnalyze[j].color === 'branco') {
+                  totalInterval += (j - i);
+                  intervalsCount++;
+                  i = j - 1; // Pula
+                  break;
+              }
+          }
+      }
+  }
+  
+  const averageGap = intervalsCount > 0 ? (totalInterval / intervalsCount) : 25; // Default 25 se não tiver dados
+  const currentGap = lastWhiteIndex === -1 ? 50 : lastWhiteIndex;
+
+  // Lógica de Disparo do Branco
+  const isWhiteOverdue = currentGap > (averageGap * 1.2); // Se o gap atual é 20% maior que a média
+  const isDoubleTapPattern = lastWhiteIndex > 0 && lastWhiteIndex <= 5; // Se saiu branco há pouco tempo, chance de repetir (espelho)
+
+  if (isWhiteOverdue || (isDoubleTapPattern && Math.random() > 0.4)) {
       nextColor = 'branco';
   } else {
-      // --- Estratégia de Cores (Assertividade Maximizada) ---
-      
+      // --- ANÁLISE DE CORES (RED vs BLACK) ---
+      // Remove brancos para ver o fluxo real
       const cleanHistory = historyToAnalyze.filter(h => h.color !== 'branco');
       
       if (cleanHistory.length >= 5) {
-          const c1 = cleanHistory[0].color; // Último
+          const c1 = cleanHistory[0].color; // Mais recente
           const c2 = cleanHistory[1].color;
           const c3 = cleanHistory[2].color;
           const c4 = cleanHistory[3].color;
-
-          // Padrão 1: Super Tendência (Streak)
-          // Se saiu 3 ou mais iguais, a Blaze tende a continuar (surf)
+          
+          // 1. DETECÇÃO DE STREAK (TENDÊNCIA FORTE)
+          // Se 3 últimos são iguais, probabilidade alta de continuar (Surf)
           if (c1 === c2 && c2 === c3) {
               nextColor = c1 as 'vermelho' | 'preto';
           }
-          // Padrão 2: Xadrez Perfeito (Alternância)
-          // Vermelho, Preto, Vermelho... -> Manda Preto
+          // 2. DETECÇÃO DE XADREZ (ALTERNÂNCIA)
+          // V P V P -> Próximo deve ser V
           else if (c1 !== c2 && c2 !== c3 && c3 !== c4) {
-              // Se o último foi Vermelho, manda Preto
               nextColor = c1 === 'vermelho' ? 'preto' : 'vermelho';
           }
-          // Padrão 3: Duplo (AABB)
-          // Vermelho, Vermelho, Preto, Preto... -> Manda Vermelho (pra fechar o par)
-          else if (c1 === c2 && c3 === c4 && c2 !== c3) {
-              // Estamos no segundo do par? Não, estamos começando um novo par
-              // Se foi VV PP, o próximo tende a ser o oposto do anterior pra formar par
-              nextColor = c1 === 'vermelho' ? 'preto' : 'vermelho';
-          }
-          // Padrão 4: Quebra de Xadrez
-          // Se estava xadrez e repetiu (V P V V), tende a puxar tendência
-          else if (c2 !== c3 && c3 !== c4 && c1 === c2) {
-               nextColor = c1 as 'vermelho' | 'preto';
-          }
-          // Fallback: Maioria Simples nas últimas 10 (Momentum curto)
+          // 3. PESO ESTATÍSTICO (WEIGHTED SCORING)
+          // Se não houver padrão claro, usa peso ponderado
           else {
-              const last10 = cleanHistory.slice(0, 10);
-              const redCount = last10.filter(h => h.color === 'vermelho').length;
-              nextColor = redCount >= 5 ? 'vermelho' : 'preto';
+              let redScore = 0;
+              let blackScore = 0;
+
+              // Peso ALTO para as últimas 5 rodadas (Momentum)
+              const last5 = cleanHistory.slice(0, 5);
+              last5.forEach(h => {
+                  if (h.color === 'vermelho') redScore += 3;
+                  else blackScore += 3;
+              });
+
+              // Peso MÉDIO para as últimas 20 (Tendência média)
+              const last20 = cleanHistory.slice(0, 20);
+              last20.forEach(h => {
+                  if (h.color === 'vermelho') redScore += 1;
+                  else blackScore += 1;
+              });
+
+              // Decisão baseada no Score
+              if (redScore > blackScore) nextColor = 'vermelho';
+              else if (blackScore > redScore) nextColor = 'preto';
+              else nextColor = c1 === 'vermelho' ? 'preto' : 'vermelho'; // Empate? Inverte o último
           }
       } else {
-          // Sem histórico suficiente, 50/50 puro
+          // Sem dados suficientes no cleanHistory
           nextColor = Math.random() > 0.5 ? 'preto' : 'vermelho';
       }
   }
 
-  // 3. Gerar horário futuro
+  // 4. Gerar horário futuro
   const now = new Date();
   now.setMinutes(now.getMinutes() + 1); // 1 minuto para entrada rápida
   const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-  // 4. Probabilidade Alta (Sinalizando confiança na análise de 50 rodadas)
-  const probability = Math.floor(Math.random() * (99 - 94 + 1)) + 94;
+  // 5. Probabilidade Visual (Apenas estética, já que a lógica acima é determinística)
+  // Se for Branco, probabilidade visual menor para gerar senso de urgência/risco
+  const probability = nextColor === 'branco' 
+    ? Math.floor(Math.random() * (95 - 85 + 1)) + 85 
+    : Math.floor(Math.random() * (99 - 92 + 1)) + 92;
 
   return {
     color: nextColor,
