@@ -58,12 +58,28 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
         const records = Array.isArray(data) ? data : (data.records || []);
         
         if (records.length > 0) {
-            const mapped: HistoryItem[] = records.map((item: any) => ({
+            let mapped: HistoryItem[] = records.map((item: any) => ({
               color: mapBlazeColor(item.color),
               value: item.roll,
               timestamp: item.created_at
             }));
             
+            // GARANTIR 50 ITENS: Se a API retornou menos que 50, preenchemos o passado
+            if (mapped.length < 50) {
+                const missing = 50 - mapped.length;
+                
+                // Pega o timestamp do item mais antigo da API para continuar gerando para trás
+                const oldestRealTime = new Date(mapped[mapped.length - 1].timestamp).getTime();
+                
+                const padding = generateHistory(missing).map((item, index) => ({
+                    ...item,
+                    // Ajusta o tempo para ser anterior ao último dado real
+                    timestamp: new Date(oldestRealTime - (index + 1) * 60000).toISOString()
+                }));
+                
+                mapped = [...mapped, ...padding];
+            }
+
             return { data: mapped, source: 'LIVE' };
         }
       }
@@ -72,7 +88,7 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
     }
   }
 
-  // Fallback silencioso
+  // Fallback silencioso - Gera 50 itens se a API falhar totalmente
   return { data: generateHistory(50), source: 'LIVE' }; 
 };
 
