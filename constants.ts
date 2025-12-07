@@ -34,6 +34,8 @@ export const WA_LINK_MENSAL = "https://api.whatsapp.com/send/?phone=71981574664&
 
 export const WA_LINK_PREMIUM = "https://api.whatsapp.com/send/?phone=71981574664&text=Ol%C3%A1%2C+Bom+Dia%2C+Boa+Tarde%2C+Boa+Noite%2C+Gostaria+De+Comprar+o+Plano+Premium+Do+Seu+Hacker/App/Site&type=phone_number&app_absent=0";
 
+export const WA_LINK_SUPPORT = "https://api.whatsapp.com/send/?phone=71981574664&text=Ol%C3%A1%2C+Bom+Dia%2C+Boa+Tarde%2C+Boa+Noite%2C+Gostaria+de+informa%C3%A7%C3%B5es+sobre+seu+Hacker/App/Site&type=phone_number&app_absent=0";
+
 // Pacotes Diários - Links Específicos
 export const WA_LINK_1_DIA = "https://api.whatsapp.com/send/?phone=71981574664&text=Ol%C3%A1%2C+Bom+Dia%2C+Boa+Tarde%2C+Boa+Noite%2C+Gostaria+De+Comprar+o+Plano+de+1+dia+do+Seu+Hacker/App/Site&type=phone_number&app_absent=0";
 

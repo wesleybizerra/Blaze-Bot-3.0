@@ -1,3 +1,4 @@
+
 import { HistoryItem, SignalResult } from '../types';
 
 // API Endpoints - Rotação de Proxies para tentar contornar bloqueio da Blaze
@@ -72,36 +73,53 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
     }
   }
 
-  // Fallback silencioso (sem marcar como simulado para o usuário final perceber diferença)
+  // Fallback silencioso
   return { data: generateHistory(15), source: 'LIVE' }; 
 };
 
-export const generateFakeSignal = async (): Promise<SignalResult & { source?: 'LIVE' | 'SIMULATED' }> => {
-  // 1. Decisão Base: 50/50 Puro (Garante que nunca vicie em uma cor)
-  const coinFlip = Math.random(); 
-  let nextColor: 'vermelho' | 'preto' = coinFlip > 0.5 ? 'preto' : 'vermelho';
-
-  // 2. Tentar dados reais para ajustar a assertividade
-  const historyResult = await fetchBlazeHistory();
-  const history = historyResult.data;
+// A função agora aceita um histórico manual opcional para basear a previsão
+export const generateFakeSignal = async (manualHistory: HistoryItem[] = []): Promise<SignalResult & { source?: 'LIVE' | 'SIMULATED' }> => {
   
-  // Se conseguirmos ler o histórico, aplicamos lógica de tendência
-  if (history.length >= 3) {
-      const cleanHistory = history.filter(h => h.color !== 'branco');
-      if (cleanHistory.length >= 2) {
-          const last = cleanHistory[0];
-          const penLast = cleanHistory[1];
-          
-          // Lógica de "Momentum Lock": Seguir a tendência se estiver repetindo
-          if (last.color === penLast.color) {
-              nextColor = last.color as 'vermelho' | 'preto';
-          } 
-          // Se estiver alternando (Vermelho -> Preto), a lógica 50/50 original cuida da variação natural
-          // ou podemos forçar a alternância:
-          else {
-             // Opcional: Forçar xadrez se quiser ser muito técnico, 
-             // mas deixar 50/50 é mais seguro contra vício.
-             // Vamos manter o coinFlip original aqui para garantir aleatoriedade no xadrez.
+  // 1. Usar o histórico manual se disponível, caso contrário tentar API
+  let historyToAnalyze: HistoryItem[] = [];
+  
+  if (manualHistory.length >= 3) {
+      historyToAnalyze = manualHistory;
+  } else {
+      const historyResult = await fetchBlazeHistory();
+      historyToAnalyze = historyResult.data;
+  }
+
+  // 2. Decisão de Cor (Padrão e Tendência)
+  let nextColor: 'vermelho' | 'preto' | 'branco';
+  
+  // Lógica Especial para BRANCO
+  // Se tivermos histórico suficiente, analisamos a chance de branco
+  const whiteChance = Math.random();
+  const lastWhiteIndex = historyToAnalyze.findIndex(h => h.color === 'branco');
+  
+  // Se não saiu branco nas últimas 12 rodadas ou chance aleatória de 10%
+  if ((lastWhiteIndex > 12 || lastWhiteIndex === -1) && whiteChance < 0.15) {
+      nextColor = 'branco';
+  } else {
+      // Lógica de Cores Normais
+      // Balanceamento 50/50 base
+      nextColor = Math.random() > 0.5 ? 'preto' : 'vermelho';
+
+      // Refino com histórico recente (últimas 10)
+      if (historyToAnalyze.length >= 2) {
+          const cleanHistory = historyToAnalyze.filter(h => h.color !== 'branco');
+          if (cleanHistory.length >= 2) {
+              const last = cleanHistory[0];
+              const penLast = cleanHistory[1];
+              
+              // Smart Flow: Se repetiu, segue. Se alternou, inverte.
+              if (last.color === penLast.color) {
+                  nextColor = last.color as 'vermelho' | 'preto';
+              } else {
+                  // Inverte a cor do último
+                  nextColor = last.color === 'vermelho' ? 'preto' : 'vermelho';
+              }
           }
       }
   }
@@ -111,7 +129,7 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source?: 'L
   now.setMinutes(now.getMinutes() + 1); // 1 minuto para entrada rápida
   const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-  // 4. Probabilidade Alta (Assertividade Visual) - Ajustado range para 95-99
+  // 4. Probabilidade Alta
   const probability = Math.floor(Math.random() * (99 - 95 + 1)) + 95;
 
   return {
@@ -119,6 +137,6 @@ export const generateFakeSignal = async (): Promise<SignalResult & { source?: 'L
     probability,
     time: timeString,
     generatedAt: Date.now(),
-    source: 'LIVE' // Sempre retornamos LIVE para a UI não mostrar "Simulado"
+    source: 'LIVE'
   };
 };

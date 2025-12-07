@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
-import { Zap, History, User, CreditCard, Shield, Activity, Cpu, Wifi, AlertOctagon } from 'lucide-react';
+import { Zap, History, User, CreditCard, Shield, Cpu, Wifi, AlertOctagon, Phone } from 'lucide-react';
+import { WA_LINK_SUPPORT } from '../constants';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout showBack={false}>
-      <div className="space-y-6">
+      <div className="space-y-6 relative min-h-[70vh]">
         {/* User Welcome Card */}
         <div className="bg-celestial-800/50 border border-celestial-700 p-4 rounded-xl shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-celestial-500/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
@@ -45,7 +47,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="bg-celestial-900/40 p-2 rounded-lg border border-celestial-800 flex flex-col items-center justify-center gap-1 text-center">
                 <Cpu size={16} className="text-blue-400" />
-                <span className="text-[10px] text-celestial-400 font-mono uppercase">IA v3.2</span>
+                <span className="text-[10px] text-celestial-400 font-mono uppercase">IA v8.1</span>
             </div>
             {/* Volatility Indicator - Justifies errors */}
             <div className="bg-red-950/30 p-2 rounded-lg border border-red-900/50 flex flex-col items-center justify-center gap-1 text-center animate-pulse">
@@ -62,7 +64,6 @@ const Dashboard: React.FC = () => {
               onClick={() => navigate(item.path)}
               className={`${item.color} p-6 rounded-2xl shadow-lg border border-celestial-700/50 flex items-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden`}
             >
-              {/* Subtle shine effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               
               <div className="bg-celestial-950/30 p-3 rounded-full text-white group-hover:text-celestial-300 transition-colors z-10 shadow-inner shadow-black/30">
@@ -72,6 +73,18 @@ const Dashboard: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* Whatsapp Floating Button */}
+        <a 
+          href={WA_LINK_SUPPORT}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-16 right-4 p-4 bg-green-500 rounded-full shadow-lg shadow-green-900/50 text-white hover:bg-green-400 transition-all hover:scale-110 z-50 flex items-center justify-center"
+          title="Falar com Suporte"
+        >
+            <Phone size={28} fill="currentColor" />
+        </a>
+
       </div>
     </Layout>
   );

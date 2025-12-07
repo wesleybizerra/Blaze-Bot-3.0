@@ -1,3 +1,4 @@
+
 export enum PlanType {
   TRIAL = 'TRIAL',
   MONTHLY = 'MONTHLY',
@@ -16,7 +17,7 @@ export interface User {
 }
 
 export interface SignalResult {
-  color: 'vermelho' | 'preto';
+  color: 'vermelho' | 'preto' | 'branco';
   probability: number;
   time: string;
   generatedAt: number;
@@ -36,4 +37,6 @@ export interface GlobalState {
   register: (user: Omit<User, 'plan' | 'trialEndsAt' | 'isBlocked'>) => void;
   updateUser: (email: string, data: Partial<User>) => void;
   isAdmin: boolean;
+  manualHistory: HistoryItem[];
+  addManualHistory: (color: 'vermelho' | 'preto' | 'branco') => void;
 }

@@ -1,31 +1,45 @@
+
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
+import { useApp } from '../context/AppContext';
 import { fetchBlazeHistory } from '../services/mockData';
 import { HistoryItem } from '../types';
 import { BLAZE_GAME_URL, BLAZE_HISTORY_URL } from '../constants';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 
 const HistoryPage: React.FC = () => {
+  const { manualHistory } = useApp();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
-    // Keep loading state mostly for initial load or manual refresh
+    // Mescla o histórico manual com o histórico da API
     const result = await fetchBlazeHistory();
-    setHistory(result.data);
+    const apiData = result.data;
+    
+    // Se tiver histórico manual, usamos ele como prioritário e preenchemos o resto com API
+    // Para garantir que mostremos sempre as últimas rodadas reais
+    let displayHistory = [...manualHistory];
+    
+    if (displayHistory.length < 15) {
+        // Preenche com API se faltar
+        const needed = 15 - displayHistory.length;
+        displayHistory = [...displayHistory, ...apiData.slice(0, needed)];
+    }
+    
+    setHistory(displayHistory);
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
-    
-    // Auto-refresh every 10 seconds to sync with real game
+    // Refresh interval
     const interval = setInterval(() => {
         loadData();
-    }, 10000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [manualHistory]); // Recarrega se o manual history mudar
 
   const getColorClass = (color: string) => {
     switch (color) {
@@ -48,7 +62,7 @@ const HistoryPage: React.FC = () => {
         
         <div className="bg-celestial-800/50 rounded-xl p-4 border border-celestial-700 min-h-[100px]">
           {loading && history.length === 0 ? (
-             <div className="text-center py-8 text-celestial-400">Carregando dados da Blaze...</div>
+             <div className="text-center py-8 text-celestial-400">Carregando dados...</div>
           ) : (
             <div className="grid grid-cols-5 gap-3 mb-4 animate-fade-in">
                 {history.map((item, idx) => (
@@ -56,14 +70,14 @@ const HistoryPage: React.FC = () => {
                     key={idx} 
                     className={`aspect-square rounded-lg flex items-center justify-center font-bold text-sm border-2 shadow-lg transition-all hover:scale-105 ${getColorClass(item.color)}`}
                 >
-                    {item.value}
+                    {item.value || (item.color === 'branco' ? '0' : '-')}
                 </div>
                 ))}
             </div>
           )}
           
           <p className="text-xs text-center text-celestial-400 mt-2 italic flex items-center justify-center gap-1">
-             Sincronizado com Blaze API (Proxy)
+             Últimas rodadas (Manual + API)
           </p>
         </div>
 

@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, PlanType, GlobalState } from '../types';
+import { User, PlanType, GlobalState, HistoryItem } from '../types';
 import { ADMIN_EMAILS, PREMIUM_WHITELIST } from '../constants';
 import { auth, db } from '../services/firebase';
 import { 
@@ -30,6 +31,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  
+  // Histórico Manual inserido pelo usuário na tela de Sinais
+  const [manualHistory, setManualHistory] = useState<HistoryItem[]>([]);
+
+  const addManualHistory = (color: 'vermelho' | 'preto' | 'branco') => {
+    const newItem: HistoryItem = {
+      color,
+      value: color === 'branco' ? 0 : Math.floor(Math.random() * 14) + 1,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Mantém apenas os últimos 20 itens
+    setManualHistory(prev => [newItem, ...prev].slice(0, 20));
+  };
 
   // 1. Monitorar todos os usuários em tempo real (Sync Admin)
   useEffect(() => {
@@ -106,8 +121,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Salvar dados no Firestore usando o email como ID
       await setDoc(doc(db, "users", userData.email), newUser);
       
-      // O onSnapshot vai atualizar o estado automaticamente
-      // O onAuthStateChanged vai logar o usuário automaticamente
     } catch (error: any) {
       console.error("Erro ao cadastrar:", error);
       if (error.code === 'auth/email-already-in-use') {
@@ -125,7 +138,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        // O onAuthStateChanged vai lidar com o resto
     } catch (error: any) {
         console.error("Erro ao logar:", error);
         alert('Email ou senha incorretos.');
@@ -217,7 +229,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       checkAccess,
       addTime,
       setPlan,
-      loadingAuth
+      loadingAuth,
+      manualHistory,
+      addManualHistory
     }}>
       {children}
     </AppContext.Provider>

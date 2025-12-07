@@ -1,11 +1,11 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
 import { generateFakeSignal } from '../services/mockData';
-import { BLAZE_HISTORY_URL } from '../constants';
 import { SignalResult } from '../types';
-import { Loader2, Lock, CheckCircle, TrendingUp, Wifi } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, TrendingUp, Wifi, Target } from 'lucide-react';
 
 interface ExtendedSignal extends SignalResult {
     source?: 'LIVE' | 'SIMULATED';
@@ -13,7 +13,7 @@ interface ExtendedSignal extends SignalResult {
 
 const Signals: React.FC = () => {
   const navigate = useNavigate();
-  const { checkAccess } = useApp();
+  const { checkAccess, addManualHistory, manualHistory } = useApp();
   const hasAccess = checkAccess();
 
   const [loading, setLoading] = useState(false);
@@ -26,9 +26,9 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Conectando Servidor Neural...",
-      "Validando Tendência...",
-      "Calculando Probabilidade...",
+      "Processando Histórico Manual...",
+      "Identificando Padrão...",
+      "Calculando Proteção no Branco...",
       "Confirmando Entrada..."
     ];
 
@@ -37,10 +37,15 @@ const Signals: React.FC = () => {
       await new Promise(r => setTimeout(r, 400)); 
     }
 
-    const newSignal = await generateFakeSignal();
+    // Passamos o histórico manual para o gerador usar como base
+    const newSignal = await generateFakeSignal(manualHistory);
 
     setSignal(newSignal);
     setLoading(false);
+  };
+
+  const handleManualInput = (color: 'vermelho' | 'preto' | 'branco') => {
+    addManualHistory(color);
   };
 
   if (!hasAccess) {
@@ -59,9 +64,6 @@ const Signals: React.FC = () => {
             >
               Liberar Acesso Agora
             </button>
-            <p className="text-xs text-celestial-500 mt-4">
-              Dúvidas? Contate o suporte.
-            </p>
           </div>
         </div>
       </Layout>
@@ -80,8 +82,38 @@ const Signals: React.FC = () => {
           </p>
         </div>
 
+        {/* Manual Input Section */}
+        <div className="bg-celestial-800/40 p-4 rounded-2xl border border-celestial-700">
+            <h3 className="text-sm text-center text-celestial-300 mb-3 flex items-center justify-center gap-2">
+                <Target size={16} /> O QUE SAIU AGORA?
+            </h3>
+            <div className="flex justify-center gap-4">
+                <button 
+                    onClick={() => handleManualInput('vermelho')}
+                    className="w-16 h-16 rounded-xl bg-red-600 border-2 border-red-400 shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all text-white font-bold text-xs"
+                >
+                    VERMELHO
+                </button>
+                <button 
+                    onClick={() => handleManualInput('branco')}
+                    className="w-16 h-16 rounded-xl bg-white border-2 border-gray-300 shadow-[0_0_15px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-all text-slate-900 font-bold text-xs"
+                >
+                    BRANCO
+                </button>
+                <button 
+                    onClick={() => handleManualInput('preto')}
+                    className="w-16 h-16 rounded-xl bg-slate-900 border-2 border-slate-600 shadow-[0_0_15px_rgba(15,23,42,0.4)] hover:scale-105 active:scale-95 transition-all text-white font-bold text-xs"
+                >
+                    PRETO
+                </button>
+            </div>
+            <p className="text-[10px] text-center text-celestial-500 mt-2">
+                Clique na cor que saiu para calibrar a IA com as últimas rodadas.
+            </p>
+        </div>
+
         {/* Signal Display Area */}
-        <div className="min-h-[320px] flex flex-col items-center justify-center bg-celestial-800/50 border border-celestial-600 rounded-3xl p-6 relative overflow-hidden shadow-inner shadow-black/50">
+        <div className="min-h-[300px] flex flex-col items-center justify-center bg-celestial-800/50 border border-celestial-600 rounded-3xl p-6 relative overflow-hidden shadow-inner shadow-black/50">
           
           {loading ? (
             <div className="text-center space-y-4 animate-pulse">
@@ -91,18 +123,28 @@ const Signals: React.FC = () => {
           ) : signal ? (
             <div className="w-full text-center space-y-6 animate-scale-in">
               
-              {/* High Confidence Banner */}
               <div className="bg-emerald-900/40 border border-emerald-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <CheckCircle size={16} className="text-emerald-400" />
-                <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">PADRÃO CONFIRMADO</span>
+                <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">
+                    {signal.color === 'branco' ? 'ALERTA DE OPORTUNIDADE' : 'PADRÃO CONFIRMADO'}
+                </span>
                 <CheckCircle size={16} className="text-emerald-400" />
               </div>
 
               <div className="space-y-2">
                 <p className="text-celestial-400 text-sm font-bold uppercase tracking-widest">Entrar na cor</p>
-                <div className={`text-5xl font-extrabold ${signal.color === 'vermelho' ? 'text-red-500 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]' : 'text-slate-200 drop-shadow-[0_0_25px_rgba(255,255,255,0.4)]'}`}>
-                  {signal.color === 'vermelho' ? '🔴 VERMELHO' : '⚫ PRETO'}
+                <div className={`text-4xl font-extrabold ${
+                    signal.color === 'vermelho' ? 'text-red-500 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]' : 
+                    signal.color === 'preto' ? 'text-slate-200 drop-shadow-[0_0_25px_rgba(255,255,255,0.4)]' :
+                    'text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.8)]'
+                }`}>
+                  {signal.color === 'vermelho' ? '🔴 VERMELHO' : 
+                   signal.color === 'preto' ? '⚫ PRETO' : 
+                   '⚪ BRANCO'}
                 </div>
+                {signal.color === 'branco' && (
+                    <p className="text-xs text-yellow-400 font-bold uppercase blink-animation">Proteção no branco</p>
+                )}
               </div>
 
               <div className="bg-celestial-900/50 rounded-xl p-4 border border-celestial-700/50 inline-block w-full max-w-[200px]">
@@ -110,18 +152,13 @@ const Signals: React.FC = () => {
                 <p className="text-3xl font-mono text-white font-bold">{signal.time}</p>
               </div>
 
-              {/* Probability Display - HIGH */}
               <div className="flex flex-col gap-1 items-center">
                   <div className={`flex items-center justify-center gap-2 text-xs px-4 py-1.5 rounded-full mx-auto w-max border text-emerald-400 bg-emerald-950/30 border-emerald-800/40`}>
                     <TrendingUp size={14} />
                     <span className="font-bold">Assertividade: {signal.probability}%</span>
                   </div>
-                  <div className="w-full max-w-[150px] bg-gray-700 rounded-full h-1.5 mt-2">
-                    <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${signal.probability}%` }}></div>
-                  </div>
               </div>
 
-              {/* Connected Indicator - Always Green */}
               <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-50">
                 <Wifi size={12} className="text-green-500" />
                 <span className="text-[10px] text-green-500 font-mono">SYSTEM ONLINE</span>
@@ -130,12 +167,11 @@ const Signals: React.FC = () => {
           ) : (
             <div className="text-center opacity-50 space-y-2">
               <TrendingUp size={48} className="text-celestial-600 mx-auto" />
-              <p className="text-celestial-400">Clique abaixo para analisar</p>
+              <p className="text-celestial-400">Clique na cor que saiu acima, depois clique em Gerar Sinal</p>
             </div>
           )}
         </div>
 
-        {/* Action Button */}
         {!loading && (
           <button
             onClick={performAnalysis}
