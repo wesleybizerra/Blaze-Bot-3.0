@@ -26,15 +26,15 @@ const Signals: React.FC = () => {
     setSignal(null);
     
     const steps = [
-      "Carregando Estratégias MHI...",
-      "Analisando Padrões de Vela e Surf...",
-      "Verificando Ciclos de Minutos...",
-      "Confirmando Entrada Estratégica V11..."
+      "Localizando último Branco...",
+      "Iniciando Contagem Regressiva...",
+      "Verificando Regra de Repetição (R03)...",
+      "Calculando entrada G1/G2..."
     ];
 
     for (const step of steps) {
       setAnalysisStep(step);
-      await new Promise(r => setTimeout(r, 500)); 
+      await new Promise(r => setTimeout(r, 600)); 
     }
 
     // Passamos o histórico manual para o gerador usar como base
@@ -78,7 +78,7 @@ const Signals: React.FC = () => {
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-white">Gerador Double Pro</h2>
           <p className="text-xs text-celestial-400">
-            Status: <span className="text-green-400 font-bold">CONECTADO</span>
+            Estratégia: <span className="text-green-400 font-bold">CONTAGEM REGRESSIVA</span>
           </p>
         </div>
 
@@ -126,7 +126,7 @@ const Signals: React.FC = () => {
               <div className="bg-emerald-900/40 border border-emerald-500/50 rounded-lg p-2 flex items-center justify-center gap-2 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <CheckCircle size={16} className="text-emerald-400" />
                 <span className="text-xs font-black text-emerald-200 uppercase tracking-widest">
-                    {signal.color === 'branco' ? 'ALERTA DE OPORTUNIDADE' : 'ESTRATÉGIA CONFIRMADA'}
+                    {signal.color === 'branco' ? 'ENTRADA CONFIRMADA' : 'SINAL CONFIRMADO'}
                 </span>
                 <CheckCircle size={16} className="text-emerald-400" />
               </div>
@@ -142,14 +142,17 @@ const Signals: React.FC = () => {
                    signal.color === 'preto' ? '⚫ PRETO' : 
                    '⚪ BRANCO'}
                 </div>
-                {signal.color === 'branco' && (
-                    <p className="text-xs text-yellow-400 font-bold uppercase blink-animation">Proteção no branco</p>
+                {signal.color !== 'branco' && (
+                    <p className="text-xs text-yellow-400 font-bold uppercase blink-animation">
+                        Proteger no Branco ⚪
+                    </p>
                 )}
               </div>
 
               <div className="bg-celestial-900/50 rounded-xl p-4 border border-celestial-700/50 inline-block w-full max-w-[200px]">
-                <p className="text-xs text-celestial-400 mb-1">Entrar até:</p>
-                <p className="text-3xl font-mono text-white font-bold">{signal.time}</p>
+                <p className="text-xs text-celestial-400 mb-1">Fazer até:</p>
+                <p className="text-lg font-mono text-white font-bold">2 Gales (G2)</p>
+                <p className="text-[10px] text-celestial-500 mt-1">Válido até {signal.time}</p>
               </div>
 
               <div className="flex flex-col gap-1 items-center">

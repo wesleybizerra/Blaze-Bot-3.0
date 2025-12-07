@@ -17,7 +17,7 @@ const Home: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-celestial-300 font-bold">v11.0 STRATEGY MASTER</span>
+            <span className="text-[10px] uppercase tracking-widest text-celestial-300 font-bold">v12.0 COUNTDOWN</span>
         </div>
 
         <div className="space-y-4 pt-12">

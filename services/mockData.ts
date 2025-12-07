@@ -88,8 +88,8 @@ export const fetchBlazeHistory = async (): Promise<{ data: HistoryItem[], source
   return { data: generateHistory(50), source: 'LIVE' }; 
 };
 
-// --- STRATEGY MASTER V11 ENGINE ---
-// Implementa lógicas de PDF de estratégias: Surf, Xadrez, MHI e Padrão de Minutos
+// --- COUNTDOWN STRATEGY V12 ENGINE ---
+// Implementa Estratégia de Contagem Regressiva + Regra de Repetição
 export const generateFakeSignal = async (manualHistory: HistoryItem[] = []): Promise<SignalResult & { source?: 'LIVE' | 'SIMULATED' }> => {
   
   let historyToAnalyze: HistoryItem[] = [];
@@ -105,98 +105,133 @@ export const generateFakeSignal = async (manualHistory: HistoryItem[] = []): Pro
   }
 
   let nextColor: 'vermelho' | 'preto' | 'branco';
-  
-  // --- SISTEMA DE VOTAÇÃO ESTRATÉGICA ---
-  // Variaveis de Pontuação
-  let scoreRed = 0;
-  let scoreBlack = 0;
-  let scoreWhite = 0;
+  let probability = 95;
+  let strategyUsed = "PADRÃO";
 
-  const cleanHistory = historyToAnalyze.filter(h => h.color !== 'branco');
-
-  if (cleanHistory.length >= 5) {
-      const last = cleanHistory[0].color;
-      const penult = cleanHistory[1].color;
-      const antep = cleanHistory[2].color;
-      
-      // ESTRATÉGIA 1: SURF (TENDÊNCIA) - Peso 3
-      // Se 3 ou mais iguais, tendência é forte.
-      if (last === penult && penult === antep) {
-          if (last === 'vermelho') scoreRed += 3;
-          else scoreBlack += 3;
-      }
-
-      // ESTRATÉGIA 2: XADREZ (ALTERNÂNCIA) - Peso 2
-      // Se V-P-V, aposta P.
-      const isChess = (last !== penult) && (penult !== antep);
-      if (isChess) {
-          if (last === 'vermelho') scoreBlack += 2; // Oposto
-          else scoreRed += 2; // Oposto
-      }
-
-      // ESTRATÉGIA 3: MHI (Maioria/Minoria das ultimas 3) - Peso 1
-      // Conta as ultimas 3 cores, aposta na que saiu MENOS (reversão curta)
-      const last3 = cleanHistory.slice(0, 3);
-      const redCount = last3.filter(c => c.color === 'vermelho').length;
-      const blackCount = last3.filter(c => c.color === 'preto').length;
-      
-      if (redCount > blackCount) scoreBlack += 1; // Aposta na minoria
-      else scoreRed += 1; // Aposta na minoria
-
-      // ESTRATÉGIA 4: RECUPERAÇÃO PÓS-LOSS (MOMENTUM) - Peso 2
-      // Se não tem padrão claro, segue o último (famoso 'surf curto')
-      if (!isChess && redCount !== 3 && blackCount !== 3) {
-           if (last === 'vermelho') scoreRed += 2;
-           else scoreBlack += 2;
-      }
-  } else {
-      // Sem dados, aleatório
-      if (Math.random() > 0.5) scoreRed += 5;
-      else scoreBlack += 5;
-  }
-
-  // --- ANÁLISE DE BRANCO (Estratégia de Minutos) ---
-  const now = new Date();
-  const minutes = now.getMinutes();
-  const minutesStr = minutes.toString();
-  const lastDigit = parseInt(minutesStr[minutesStr.length - 1]);
-
-  // Estratégia de PDF: Minutos terminados em 0, 5, 7, 9 tem mais chance de branco
-  const whiteLuckyMinute = [0, 5, 7, 9].includes(lastDigit);
-  
-  // Analise de intervalo (Gale do Branco)
+  // --- LÓGICA DE CONTAGEM REGRESSIVA (COUNTDOWN) ---
+  // 1. Encontrar o último branco
   const lastWhiteIndex = historyToAnalyze.findIndex(h => h.color === 'branco');
-  const longGap = lastWhiteIndex === -1 || lastWhiteIndex > 25; // Gap médio seguro
+  
+  // Se encontrou branco recentemente (dentro das ultimas 20 casas para ser relevante)
+  if (lastWhiteIndex !== -1 && lastWhiteIndex < 20 && lastWhiteIndex < historyToAnalyze.length - 1) {
+      
+      // A pedra que define a contagem é a que veio ANTES do branco no array (ou seja, depois do branco no tempo)
+      // Como o array é [mais_recente, ..., branco, pedra_origem, ...] -> NÃO
+      // O array é [agora, ... , pedra_pos_branco, BRANCO, ...]
+      // Logo, a pedra pós branco está no index lastWhiteIndex - 1.
+      
+      const triggerIndex = lastWhiteIndex - 1;
+      
+      if (triggerIndex >= 0) {
+          const triggerStone = historyToAnalyze[triggerIndex];
+          let targetCount = triggerStone.value; // Ex: 5
+          let targetColor = triggerStone.color; // Ex: Vermelho
+          
+          // Regra de segurança: Se o número for muito alto (>8), limitamos ou ignoramos para não ficar infinito
+          if (targetCount > 8) targetCount = 8;
+          if (targetCount < 1) targetCount = 1;
 
-  if (whiteLuckyMinute && longGap) {
-      scoreWhite += 10; // Força entrada no branco se bater minuto + gap
-  }
+          // Verificar REPETIÇÃO DO NÚMERO (Regra 03/07)
+          // Vamos varrer do triggerIndex - 1 até 0 (o agora)
+          let currentCount = 1; // Já conta a pedra gatilho
+          let repetitionFound = false;
 
-  // --- DECISÃO FINAL ---
-  // Verifica quem tem mais pontos
-  if (scoreWhite > 15) { // Threshold alto para branco
-      nextColor = 'branco';
-  } else if (scoreRed > scoreBlack) {
-      nextColor = 'vermelho';
-  } else if (scoreBlack > scoreRed) {
-      nextColor = 'preto';
+          for (let i = triggerIndex - 1; i >= 0; i--) {
+              const stone = historyToAnalyze[i];
+              
+              // Se o número se repetiu!
+              if (stone.value === triggerStone.value) {
+                  repetitionFound = true;
+                  // Inverte a lógica: Agora contamos a cor OPOSTA
+                  targetColor = targetColor === 'vermelho' ? 'preto' : 'vermelho';
+                  strategyUsed = "REPETIÇÃO DETECTADA";
+                  // Reinicia contagem a partir dessa repetição? Ou soma? A regra diz "reinicie".
+                  // Simplificação: Consideramos que a repetição QUEBRA a contagem anterior e foca na oposta.
+                  currentCount = 0; 
+              }
+
+              if (stone.color === targetColor) {
+                  currentCount++;
+              }
+          }
+
+          // DECISÃO DA CONTAGEM
+          if (currentCount === targetCount) {
+              // Atingiu a contagem exata! HORA DA ENTRADA NA COR OPOSTA.
+              nextColor = targetColor === 'vermelho' ? 'preto' : 'vermelho';
+              probability = 99; // Sinal de Sniper
+              strategyUsed = "CONTAGEM FINALIZADA";
+          } else if (currentCount < targetCount) {
+              // Ainda não atingiu. A estratégia sugere que a tendência da mesma cor continua
+              // para preencher a contagem.
+              nextColor = targetColor;
+              probability = 92;
+              strategyUsed = `CONTANDO... (${currentCount}/${targetCount})`;
+          } else {
+              // Passou da contagem? Abortar e usar estratégia secundária (V11)
+              strategyUsed = "ABORTAR CONTAGEM";
+              // Fallback para V11 abaixo
+              nextColor = 'branco'; // Placeholder pra cair no fallback
+          }
+      } else {
+          // Branco acabou de sair, impossível definir contagem ainda
+          nextColor = 'branco'; // Fallback
+      }
   } else {
-      // Empate? Segue o último (Momentum puro)
-      nextColor = cleanHistory.length > 0 ? (cleanHistory[0].color as 'vermelho' | 'preto') : 'vermelho';
+      nextColor = 'branco'; // Fallback
   }
 
-  // Gerar horário futuro (entrada válida até)
+  // --- FALLBACK: STRATEGY MASTER V11 (Se a contagem não estiver ativa ou falhar) ---
+  if (nextColor === 'branco' && strategyUsed !== "CONTAGEM FINALIZADA") {
+      
+      let scoreRed = 0;
+      let scoreBlack = 0;
+      const cleanHistory = historyToAnalyze.filter(h => h.color !== 'branco');
+
+      if (cleanHistory.length >= 4) {
+          const last = cleanHistory[0].color;
+          const penult = cleanHistory[1].color;
+          
+          // SURF (Tendência)
+          if (last === penult) {
+              if (last === 'vermelho') scoreRed += 3;
+              else scoreBlack += 3;
+          }
+
+          // XADREZ
+          if (last !== penult) {
+              if (last === 'vermelho') scoreBlack += 2;
+              else scoreRed += 2;
+          }
+          
+          if (scoreRed > scoreBlack) nextColor = 'vermelho';
+          else nextColor = 'preto';
+      } else {
+          // Aleatório 50/50 se não tiver dados
+          nextColor = Math.random() > 0.5 ? 'vermelho' : 'preto';
+      }
+      probability = 95;
+  }
+
+  // --- ANÁLISE DE BRANCO (Proteção Regra 01) ---
+  // Sempre adicionar proteção no branco se fizer tempo que não sai
+  const now = new Date();
+  const lastWhiteIdx = historyToAnalyze.findIndex(h => h.color === 'branco');
+  const gap = lastWhiteIdx === -1 ? 50 : lastWhiteIdx;
+  
+  // Se gap > 15, chance alta de branco
+  let isWhiteSignal = false;
+  if (gap > 20) {
+       // Se a estratégia principal estiver muito incerta, manda branco direto
+       if (probability < 93) {
+           nextColor = 'branco';
+           isWhiteSignal = true;
+       }
+  }
+
+  // Gerar horário futuro
   now.setMinutes(now.getMinutes() + 2);
   const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-  // Probabilidade baseada na "força" do score
-  let probability = 90;
-  if (nextColor !== 'branco') {
-      // Quanto maior a diferença de score, maior a certeza
-      const diff = Math.abs(scoreRed - scoreBlack);
-      probability = 94 + diff; 
-      if (probability > 99) probability = 99;
-  }
 
   return {
     color: nextColor,
